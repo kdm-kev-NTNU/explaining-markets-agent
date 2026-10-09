@@ -1,0 +1,24 @@
+# Hemmeligheter — ALDRI commit
+.env
+agent/.env
+
+# Lokal drift/stat
+research/state.json
+research/__pycache__/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Backup-filer
+*.orig
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
