@@ -2,6 +2,12 @@
 .env
 agent/.env
 
+# Private working notes (not for recruiters / public clone)
+NOTES.md
+research/FORSKNING.md
+*.docx
+private/
+
 # Lokal drift/stat
 research/state.json
 research/__pycache__/
