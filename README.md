@@ -1,35 +1,52 @@
-# Explaining Markets — Cogito NTNU
+# Explaining Markets
 
-Kvartalsvis konkurranse: AI-agent forutsier aksjeavkastning rundt earnings.
-Arrangør: U. Chicago (Koijen & Levy) + Optiver. Q4-scoring: 12. okt – 15. des 2026.
+**Kevin** — live agent that ranks next-day abnormal equity returns around earnings.
 
-- Docs: https://explainingmarkets.ai/docs
-- API base: https://api.explainingmarkets.ai/v1
-- Premiepott $7 500 (kun US-borgere 18+ — vi deltar for live-evalueringen, ikke premien)
-- Kontakt: contact@explainingmarkets.ai
+[Explaining Markets](https://explainingmarkets.ai/) is a quarterly, out-of-sample benchmark run by Ralph S. J. Koijen and Bradford Levy (University of Chicago Booth) **in collaboration with Optiver**. The working paper is *Assessing the Benefits of Optimized Agentic AI Systems for Asset Pricing*: historical backtests leak, markets are reflexive, so the only honest test is real-time prediction against realized outcomes.
 
-## Arkitektur (fra docs)
-Event (selskap rapporterer) → signert webhook til agenten → ACK 200 →
-les prediction_deadline (default +5 min fra ACK) → POST prediksjon til
-/v1/predictions med X-API-Key → scores mot faktisk markedsutfall →
-offentlig leaderboard.
+Q4 2026 scoring window: 12 Oct – 15 Dec 2026.
 
-## Materials per event (plukk via item.id, aldri posisjon)
-1. Sammendrag av earnings call (POST-knowledge_cutoff)
-2. Earnings preview (PRE-cutoff, agentic research + opsjonsimplisitte tall — nytt fra Q4)
-3. Option-implied stats (JSON-objekt, kun likvide opsjoner): implied earnings vol, implied absolute move, 25-delta skew
+## The question
 
-## Regler
-- Kun informasjon tilgjengelig ved knowledge_cutoff (ISO 8601 UTC)
-- Kun FØRSTE gyldige prediksjon per event teller (late/early/duplikat = 201, ignoreres)
-- 403 SUBMISSION_DISABLED / 403 WEBHOOK_NOT_REGISTERED / 409 EVENT_CLOSED = strukturelle feil
+After an earnings release, where does this stock’s next-day market-adjusted return sit in the quarter’s cross-section — from 0 (most negative) to 1 (most positive)?
 
-## Kanban-board
-Slug: `explaining-markets` — vis i dashboard: Kanban-tab → board-velger.
-CLI: `hermes kanban --board explaining-markets <cmd>`
+The score is **ΔR² beyond earnings surprise**. A constant 0.5 scores exactly zero. Affine remapping of predictions does not change the score: only ranking information counts. The allocator’s question is whether the agent explains anything once the surprise is already known.
 
-## Faser
-1. Onboarding (portal-konto + submission) — manuell, Kevin/Cogito
-2. Webhook-agent (Modal-deploy, signering, prediksjonsklient)
-3. Prediksjonsstrategi (artikkel, baseline, hovedmodell)
-4. Overvåking (leaderboard, health, drift gjennom Q4)
+## Why Optiver’s surface is the prior
+
+Each event can carry option-implied stats measured **before** the release (liquid names only):
+
+| Statistic | What it is |
+|---|---|
+| Implied earnings vol | Standard deviation of the move options price in |
+| Implied absolute move | Size of the priced move (directionless) |
+| 25-delta skew | Call IV minus put IV; negative means downside protection is richer |
+
+That surface is the market’s pre-release distribution. The agent’s job is the residual: guidance vs the prior path, forward-looking call content, and divergence from what options already priced — not restating the surprise the benchmark already absorbs.
+
+```mermaid
+flowchart LR
+  event[Earnings event] --> prior[Pre-release prior]
+  prior --> opts[Option surface]
+  prior --> preview[Earnings preview]
+  event --> facts[Call facts]
+  opts --> rank[Cross-sectional rank]
+  preview --> rank
+  facts --> rank
+  rank --> score["Delta R2 beyond surprise"]
+```
+
+## Layout
+
+| Path | Role |
+|---|---|
+| [`APPROACH.md`](APPROACH.md) | Scoring identity, signal design, production clocks |
+| [`CONCEPTS.md`](CONCEPTS.md) | Glossary of terms with primary sources |
+| [`agent/`](agent/) | Modal webhook receiver + `predict.py` strategy |
+| [`agent/README.md`](agent/README.md) | Deploy guide (credentials, webhook URL, tests) |
+
+## Docs
+
+- Competition docs: https://explainingmarkets.ai/docs
+- API base: `https://api.explainingmarkets.ai/v1`
+- Contact: contact@explainingmarkets.ai

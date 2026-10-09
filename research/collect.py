@@ -61,7 +61,7 @@ def arxiv_search(query: str, max_results: int = MAX_PER_QUERY) -> list[dict]:
     url = f"{API}?{params}"
     for attempt in range(3):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "cogito-research/1.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "explaining-markets-research/1.0"})
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = resp.read()
             root = ET.fromstring(data)

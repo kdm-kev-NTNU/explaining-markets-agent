@@ -79,8 +79,8 @@ class _FakeResponse:
 
 
 def test_predict_fallback_shape(monkeypatch) -> None:
-    """Cogito strategy: without an LLM key the deterministic option-stats
-    fallback fires (a VARYING signal — a constant 0.5 scores exactly ΔR² 0).
+    """Without an LLM key the deterministic option-stats fallback fires
+    (a VARYING signal — a constant 0.5 scores exactly ΔR² 0).
     With no option stats either, the flat 0.5 delivery fallback applies."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(predict_module.httpx, "get", lambda *a, **k: _FakeResponse())
@@ -125,13 +125,15 @@ def test_items_are_found_by_id_not_by_position() -> None:
 
 
 def test_a_long_preview_never_costs_the_facts_or_the_statistics() -> None:
-    """The old prompt took the first 8,000 characters of the raw JSON, so a long
-    preview pushed every later item out of the model's view."""
+    """A long preview is truncated in place; option stats and call facts still
+    reach the prompt. Prior (stats, preview) comes before realization (facts)."""
     long_preview = {**PREVIEW_ITEM, "content": "# Preview\n" + "x" * 50_000}
     text = predict_module.format_materials(_bundle(FACTS_ITEM, long_preview, STATS_ITEM))
     assert "1. Revenue rose 12% year over year." in text
     assert "Implied earnings volatility: 8.5%" in text
-    assert text.endswith("[preview truncated]")
+    assert "[preview truncated]" in text
+    assert text.index("Implied earnings volatility") < text.index("[preview truncated]")
+    assert text.index("[preview truncated]") < text.index("Facts from the earnings call")
     kept = predict_module.PREVIEW_MAX_CHARS - len("# Preview\n")
     assert "x" * kept in text and "x" * (kept + 1) not in text
 

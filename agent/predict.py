@@ -1,19 +1,19 @@
-"""Cogito NTNU-baseline for Explaining Markets — predict(event) → percentiler.
+"""Explaining Markets strategy — predict(event) → cross-sectional percentiles.
 
-Strategi (se ~/explaining-markets/NOTES.md for scoring-mekanikk):
-  ΔR² over earnings-surprise-benchmark. Konstante prediksjoner = ΔR² 0.
-  Kalibrering scores ikke (affin remapping-invarians) — kun rangeringsinformasjon.
+Scoring (see ../APPROACH.md and ../CONCEPTS.md):
+  ΔR² beyond the earnings-surprise benchmark. Constant predictions ⇒ ΔR² = 0.
+  Calibration is unscored (affine remapping invariance) — only ranking counts.
 
-Kjede per focal asset:
-  1. Hent materials-bundle fra information_url (fakta, preview, opsjonsstats).
-  2. Deterministisk opsjonssignal (skew + vol) som prompt-støtte og fallback.
-  3. Ett LLM-kall (idun GLM-5.3 via NTNU HPC — OpenAI-kompatibelt, kostnad 0)
-     som returnerer JSON {"predicted_percentile": x, "reason": "..."}.
-  4. Fallback ved LLM-feil: opsjonssignal alene; deretter 0.5 (levering slår
-     imputering, men konstant-baselines tjener ingenting — siste utvei).
+Per focal asset:
+  1. Fetch the materials bundle from information_url (facts, preview, option stats).
+  2. Deterministic option signal (skew + vol) as prompt context and fallback.
+  3. One LLM call via an OpenAI-compatible endpoint
+     (OPENAI_BASE_URL + OPENAI_API_KEY), returning
+     JSON {"predicted_percentile": x, "reason": "..."}.
+  4. On LLM failure: option signal alone; then 0.5 (delivery beats imputation;
+     constant baselines earn nothing — last resort).
 
-Timebudsjetter mot 5-min vinduet: henting 15 s, LLM 150 s + 1 retry.
-`predict.py.orig` er upstream-originalen om vi vil sammenligne.
+Time budgets against the 5-minute window: fetch 15 s, LLM 150 s + 1 retry.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ _client: OpenAI | None = None  # lazy: importing this file must not require a ke
 SUMMARY_TIMEOUT_SECONDS = 15.0
 LLM_TIMEOUT_SECONDS = 150.0
 LLM_MAX_RETRIES = 1
-LLM_MAX_TOKENS = 3000  # GLM-5.3 er en reasoning-modell — trenger rom for tankerekken
+LLM_MAX_TOKENS = 3000  # reasoning models need headroom for the chain of thought
 
 FACTS_ID = "earnings-call-facts"
 PREVIEW_ID = "earnings-preview"
@@ -166,10 +166,10 @@ def option_stats_signal(bundle: dict) -> str:
 def format_materials(bundle: object) -> str:
     """Turn the event's bundle into the text the model reads.
 
-    Items are found by `id`, so the order they arrive in does not matter, and
-    an item this code has never heard of is included if it is text and
-    skipped otherwise, never an error. The preview goes LAST so a cut never
-    costs the facts or the option statistics.
+    Items are found by `id`, so arrival order does not matter. Unknown text
+    items are included; non-text unknowns are skipped. Order is prior first
+    (option surface, then preview), then realization (call facts), so the
+    model sees the priced distribution before what was said.
     """
     if not isinstance(bundle, dict):
         return ""
@@ -178,18 +178,20 @@ def format_materials(bundle: object) -> str:
     by_id = {i.get("id"): i for i in items}
     sections: list[str] = []
 
-    facts = (by_id.get(FACTS_ID) or {}).get("content")
-    if isinstance(facts, list) and facts:
-        sections.append(
-            "Facts from the earnings call:\n"
-            + "\n".join(f"{n}. {fact}" for n, fact in enumerate(facts, start=1))
-        )
-
     stats = (by_id.get(OPTION_STATS_ID) or {}).get("content")
     if isinstance(stats, dict):
         formatted = _format_option_stats(stats)
         if formatted:
             sections.append(formatted)
+
+    preview = (by_id.get(PREVIEW_ID) or {}).get("content")
+    if isinstance(preview, str) and preview.strip():
+        text = preview[:PREVIEW_MAX_CHARS]
+        if len(preview) > PREVIEW_MAX_CHARS:
+            text += "\n[preview truncated]"
+        sections.append(
+            "Research note written BEFORE the release (expectations, not results):\n" + text
+        )
 
     for item in items:
         if item.get("id") in (FACTS_ID, PREVIEW_ID, OPTION_STATS_ID):
@@ -201,13 +203,11 @@ def format_materials(bundle: object) -> str:
             label = item.get("id") or item.get("kind") or "item"
             sections.append(f"Additional material ({label}):\n{content[:OTHER_ITEM_MAX_CHARS]}")
 
-    preview = (by_id.get(PREVIEW_ID) or {}).get("content")
-    if isinstance(preview, str) and preview.strip():
-        text = preview[:PREVIEW_MAX_CHARS]
-        if len(preview) > PREVIEW_MAX_CHARS:
-            text += "\n[preview truncated]"
+    facts = (by_id.get(FACTS_ID) or {}).get("content")
+    if isinstance(facts, list) and facts:
         sections.append(
-            "Research note written BEFORE the release (expectations, not results):\n" + text
+            "Facts from the earnings call:\n"
+            + "\n".join(f"{n}. {fact}" for n, fact in enumerate(facts, start=1))
         )
 
     return "\n\n".join(sections)
@@ -216,7 +216,8 @@ def format_materials(bundle: object) -> str:
 # ---------------------------------------------------------------- LLM-kallet ---
 
 SYSTEM_PROMPT = """\
-You are a senior equity analyst competing in a live prediction benchmark.
+Rank the residual equity reaction given a priced earnings surprise and a
+pre-release option-implied distribution.
 
 Predict a single percentile in [0, 1] for how the focal asset's next-day
 abnormal (market-adjusted) return will rank across ALL of the quarter's
@@ -224,16 +225,21 @@ earnings events: 0 = the quarter's most negative reaction, 0.50 = median,
 1 = its most positive. A great-but-fully-priced-in beat is NOT a top-decile
 event — the benchmark already captures the raw earnings surprise. Your value
 is in what the surprise does NOT capture: guidance shifts vs the prior
-trajectory, tone, strategic changes, expectations vs. realized results, and
-option-market positioning.
+trajectory, forward-looking call content, strategic changes, expectations vs.
+realized results, and divergence from option-market positioning.
 
 Weigh, in roughly this order:
-  1. Quantitative surprise vs expectations — revenue, EPS, segment metrics.
-  2. Guidance / outlook — raises, holds, cuts vs the prior trajectory.
+  1. Guidance / outlook — raises, holds, cuts vs the prior trajectory.
+  2. Forward-looking call content that is novel vs restating the surprise.
   3. Strategic shifts — product launches, M&A, capital allocation, leadership.
-  4. Option-market positioning — skew direction and implied move.
-  5. Tone and confidence in management commentary (small weight).
-  6. Risks called out — regulatory, supply chain, demand, competition.
+  4. Option-market positioning — skew direction; treat implied move as size/
+     confidence (do not double-count it if the preview already embeds it).
+  5. Quantitative surprise vs expectations — only the part not already implied.
+  6. Tone and confidence in management commentary (small weight).
+  7. Risks called out — regulatory, supply chain, demand, competition.
+
+If preview or option stats are missing, say so in the reason and rely on call
+facts alone — do not invent a ticker prior.
 
 Calibration discipline:
 - Long-run base rates: about 25% of events land "up" (>0.75), 50% "neutral"
@@ -256,13 +262,12 @@ def _llm_available() -> bool:
 
 
 def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str) -> float | None:
-    """One call to idun/GLM-5.3 (OPENAI_BASE_URL in .env points there). None on failure."""
+    """One OpenAI-compatible chat call. None on failure."""
     global _client
     if not _llm_available():
         return None
     if _client is None:
-        # OPENAI_BASE_URL + OPENAI_API_KEY in env point at idun (NTNU HPC);
-        # the OpenAI client speaks the same protocol.
+        # OPENAI_BASE_URL + OPENAI_API_KEY select the endpoint; OpenAI client protocol.
         _client = OpenAI(timeout=LLM_TIMEOUT_SECONDS, max_retries=LLM_MAX_RETRIES)
 
     if not materials:
