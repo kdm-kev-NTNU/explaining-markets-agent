@@ -4,7 +4,6 @@ agent/.env
 
 # Private working notes (not for recruiters / public clone)
 NOTES.md
-research/FORSKNING.md
 *.docx
 private/
 
