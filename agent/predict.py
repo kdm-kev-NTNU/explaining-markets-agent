@@ -23,7 +23,7 @@ import os
 import re
 
 import httpx
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 from explaining_markets.config import openai_model
 
@@ -34,12 +34,135 @@ LLM_TIMEOUT_SECONDS = 150.0
 LLM_MAX_RETRIES = 1
 LLM_MAX_TOKENS = 3000  # reasoning models need headroom for the chain of thought
 
+# Parameter forms for chat.completions.create, newest first. GPT-5.5+/GPT-6
+# reasoning models accept ONLY max_completion_tokens and the default
+# temperature; older OpenAI-compatible endpoints (e.g. the idun GLM proxy)
+# accept only legacy max_tokens. A 400 "Unsupported parameter/value" falls
+# through to the next form; any other error propagates to the fallback chain.
+# Rejected forms answer in well under a second, so this never eats the budget.
+_COMPLETION_PARAM_SETS = (
+    {"max_completion_tokens": LLM_MAX_TOKENS, "temperature": 0.3},
+    {"max_completion_tokens": LLM_MAX_TOKENS},  # temperature unsupported (GPT-6)
+    {"max_tokens": LLM_MAX_TOKENS, "temperature": 0.3},  # legacy endpoint
+    {"max_tokens": LLM_MAX_TOKENS},  # legacy endpoint, temperature unsupported
+)
+
 FACTS_ID = "earnings-call-facts"
 PREVIEW_ID = "earnings-preview"
 OPTION_STATS_ID = "option-implied-stats"
 
 PREVIEW_MAX_CHARS = 8000
 OTHER_ITEM_MAX_CHARS = 2000
+
+# Per-section budgets for _compress_preview. The preview (built with
+# Anthropic's earnings-preview skill) has a fixed shape: consensus
+# estimates, ranked key metrics, a bull/base/bear scenario grid with an
+# estimated stock reaction per scenario, a catalyst checklist, and a
+# trading setup with positioning. The scenario grid, the thresholds, and
+# the reaction history are the ranking anchors; the consensus table is
+# the longest section and mostly restates what the earnings-surprise
+# benchmark already scores. Budgets express that value ranking: sections
+# are never expanded, only trimmed — and if the trimmed whole still
+# exceeds PREVIEW_MAX_CHARS, every budget is scaled down uniformly.
+_PREVIEW_SECTION_BUDGETS: tuple[tuple[re.Pattern, int], ...] = (
+    (re.compile(r"scenario", re.I), 2200),
+    (re.compile(r"catalyst", re.I), 1600),
+    (re.compile(r"trading", re.I), 1300),
+    (re.compile(r"key metric|metrics to watch", re.I), 1600),
+    (re.compile(r"historical|reaction history", re.I), 1000),
+    (re.compile(r"operationally|requires", re.I), 800),
+    (re.compile(r"consensus|estimate", re.I), 800),
+    (re.compile(r"caveat", re.I), 500),
+)
+_PREVIEW_DEFAULT_BUDGET = 1200
+_PREVIEW_INTRO_BUDGET = 400
+_PREVIEW_FLOOR_BUDGET = 150
+_SECTION_TRIM_MARKER = "\n[section trimmed]"
+_PREVIEW_COMPRESSED_MARKER = "\n[preview compressed]"
+
+
+def _split_preview_sections(text: str) -> tuple[list[str], bool]:
+    """Markdown split into an intro chunk plus one chunk per ## header.
+
+    Returns (chunks, had_intro). h1 titles are not section breaks, so they
+    stay part of the intro.
+    """
+    headers = list(re.finditer(r"(?m)^#{2,6}[ \t]+\S.*$", text))
+    if not headers:
+        return [text], False
+    had_intro = headers[0].start() > 0
+    chunks = [text[: headers[0].start()]] if had_intro else []
+    for i, h in enumerate(headers):
+        end = headers[i + 1].start() if i + 1 < len(headers) else len(text)
+        chunks.append(text[h.start() : end])
+    return chunks, had_intro
+
+
+def _section_budget(chunk: str) -> int:
+    """Budget for one section chunk, matched on its header line."""
+    header = chunk.splitlines()[0] if chunk else ""
+    for pattern, budget in _PREVIEW_SECTION_BUDGETS:
+        if pattern.search(header):
+            return budget
+    return _PREVIEW_DEFAULT_BUDGET
+
+
+def _trim_section(chunk: str, budget: int) -> str:
+    """Trim one section in place, marking the cut so the model knows."""
+    budget = max(len(_SECTION_TRIM_MARKER) + 1, budget)
+    if len(chunk) <= budget:
+        return chunk
+    return chunk[: budget - len(_SECTION_TRIM_MARKER)].rstrip() + _SECTION_TRIM_MARKER
+
+
+def _compress_preview(text: str, budget: int = PREVIEW_MAX_CHARS) -> str:
+    """Keep a long preview within `budget` chars without losing its
+    highest-value sections.
+
+    Unstructured text (no ## headers) falls back to a plain head-cut.
+    Structured previews keep every section header, spending the budget
+    where the ranking signal lives (scenario grid > catalysts > trading
+    setup > key metrics) instead of cutting the tail — a head-cut on the
+    fixed preview shape would delete exactly the scenario and trading
+    sections the prompt weighs most.
+    """
+    if len(text) <= budget:
+        return text
+    chunks, had_intro = _split_preview_sections(text)
+    if len(chunks) < 2:
+        return text[:budget].rstrip() + "\n[preview truncated]"
+    # Join separators count against the budget, so the joined result
+    # respects it exactly.
+    budget = max(500, budget - (len(chunks) - 1) * 2)
+    sized: list[str] = []
+    budgets: list[int] = []
+    for i, chunk in enumerate(chunks):
+        b = _PREVIEW_INTRO_BUDGET if (had_intro and i == 0) else _section_budget(chunk)
+        budgets.append(b)
+        sized.append(_trim_section(chunk, b))
+    total = sum(len(c) for c in sized)
+    if total > budget:
+        # Over budget: cut the LEAST valuable sections first (smallest budget
+        # = lowest value), preserving the scenario/catalyst/trading budgets
+        # as long as the arithmetic allows. A uniform scale-down would dilute
+        # exactly the sections the prompt weighs most.
+        over = total - budget
+        for i in sorted(range(len(budgets)), key=lambda j: budgets[j]):
+            actual = len(sized[i])
+            if actual <= _PREVIEW_FLOOR_BUDGET:
+                continue  # this section holds nothing worth cutting
+            take = min(actual - _PREVIEW_FLOOR_BUDGET, over)
+            budgets[i] = actual - take
+            sized[i] = _trim_section(chunks[i], budgets[i])
+            over -= take
+            if over <= 0:
+                break
+        joined = "\n\n".join(sized)
+        if len(joined) > budget:
+            # Pathological section count: floors alone exceed the budget.
+            joined = joined[: max(0, budget - len(_PREVIEW_COMPRESSED_MARKER))].rstrip()
+            return joined + _PREVIEW_COMPRESSED_MARKER
+    return "\n\n".join(sized)
 
 
 def predict(event: dict) -> list[dict]:
@@ -186,9 +309,7 @@ def format_materials(bundle: object) -> str:
 
     preview = (by_id.get(PREVIEW_ID) or {}).get("content")
     if isinstance(preview, str) and preview.strip():
-        text = preview[:PREVIEW_MAX_CHARS]
-        if len(preview) > PREVIEW_MAX_CHARS:
-            text += "\n[preview truncated]"
+        text = _compress_preview(preview)
         sections.append(
             "Research note written BEFORE the release (expectations, not results):\n" + text
         )
@@ -229,14 +350,23 @@ trajectory, forward-looking call content, strategic changes, expectations vs.
 realized results, and divergence from option-market positioning.
 
 Weigh, in roughly this order:
-  1. Guidance / outlook — raises, holds, cuts vs the prior trajectory.
-  2. Forward-looking call content that is novel vs restating the surprise.
-  3. Strategic shifts — product launches, M&A, capital allocation, leadership.
-  4. Option-market positioning — skew direction; treat implied move as size/
+  1. Guidance / outlook — raises, holds, cuts vs the prior trajectory, and
+     any quantified forward-quarter or full-year numbers in the call facts.
+  2. Scenario placement — the preview carries a bull / base / bear grid with
+     an estimated stock reaction per scenario. Map the realized facts onto
+     that grid; where the print lands in it is your central anchor.
+  3. The buy-side bar — the preview's whisper / buy-side numbers, not
+     sell-side consensus, are what the market trades against. A beat of
+     consensus that misses the whisper is a priced-in beat.
+  4. Forward-looking call content that is novel vs restating the surprise.
+  5. Reaction history — if the preview documents how this stock reacted to
+     recent prints (e.g. beats repeatedly sold, drift after misses), let
+     that pattern temper a consensus-line result.
+  6. Strategic shifts — product launches, M&A, capital allocation, leadership.
+  7. Option-market positioning — skew direction; treat implied move as size/
      confidence (do not double-count it if the preview already embeds it).
-  5. Quantitative surprise vs expectations — only the part not already implied.
-  6. Tone and confidence in management commentary (small weight).
-  7. Risks called out — regulatory, supply chain, demand, competition.
+  8. Quantitative surprise vs expectations — only the part not already
+     implied. Tone (small weight) and called-out risks go last.
 
 If preview or option stats are missing, say so in the reason and rely on call
 facts alone — do not invent a ticker prior.
@@ -284,15 +414,24 @@ def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str
         'Strict JSON: {"predicted_percentile": <float>, "reason": "..."}'
     )
 
-    resp = _client.chat.completions.create(
-        model=openai_model(),
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=LLM_MAX_TOKENS,
-        temperature=0.3,
-    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+    resp = None
+    last_exc: Exception | None = None
+    for extra in _COMPLETION_PARAM_SETS:
+        try:
+            resp = _client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
+                model=openai_model(), messages=messages, **extra
+            )
+            break
+        except BadRequestError as exc:
+            if "Unsupported" not in str(exc):
+                raise  # a real failure — let the fallback chain handle it
+            last_exc = exc
+    if resp is None:
+        raise last_exc  # every parameter form rejected — never seen, but don't loop
     try:
         content = (resp.choices[0].message.content or "").strip()
     except Exception:
