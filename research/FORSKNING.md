@@ -101,6 +101,8 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    bull/base/bear-scenariogrid (Anthropic-skillen inkluderer forventet
    aksjereaksjon per scenario) og rangér etter scenarioplassering, ikke bare
    etter fakta alene. (Plattform-funn 2026-10-09.)
+   *Status 2026-10-13: implementert som prompt-instruksjon (vekt-punkt 2);
+   gjenstår: deterministisk grid-ekstraksjon + validering mot arkiv/live.*
 4. **Surprise-residualisering + novelty-/taler-vekting i 3c**: prompt-føring:
    fakta som gjenforteller overraskelsen er allerede i benchmarken (nedveies);
    unikt fremoverrettet call-innhold og analyst-/CFO-uttalelser oppveies.
@@ -117,9 +119,37 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    preview. Arkiv-caveat for 3b: arkiverte previews er attached etter faktum
    (ikke strengt point-in-time) — ikke overvurder preview-signalet i
    arkiv-backtests; valider heller mot live events.
-8. *(følger fra ny research hver uke)*
+   *Status 2026-10-13: gjort — stats → preview → facts-rekkefølge + verdibasert
+   seksjonskomprimering i predict.py; arkiv-caveat gjelder fortsatt for 3b.*
+8. **Modell/innsats-valg (3c)**: bloggen viser reasoning-innsats betaler
+   FØRST med preview (Luna medium 0,245 → max 0,288, <$3/1000).
+   *Status 2026-10-13: delvis løst i commit c7c99b6 — OPENAI_MODEL=gpt-6-astra
+   direkte mot OpenAI + adaptive completion-params (max_completion_tokens med
+   fallback-former); bloggen viser Astra 0,309–0,312, så effort-parameter er
+   margenal. Gjenstår: overvåk om LLM_MAX_TOKENS=3000 kapper resonneringen
+   (tegn: hyppige «[WARN] Using option-stats fallback» i Modal-loggen).*
+9. *(følger fra ny research hver uke)*
 
 ## Plattform-endringer
+
+- 2026-10-13 — fulltekstlesing av «earnings-previews»-bloggen (arrangørens
+  egne R²-målinger, 546 Q3-2026-events, leaderboard-regresjonen; SE ≈ 0,034–0,036):
+  - **R²-tabellen:** surprise alene 0,099. Call facts alene: Luna 0,218–0,222,
+    Sol 0,208–0,223, Astra 0,230–0,231 — reasoning-innsats (medium/xhigh/max)
+    flytter ingenting. MED preview: Luna 0,245/0,272/0,288, Sol 0,281/0,299/0,305,
+    Astra 0,309/0,312 (medium/xhigh/max; Astra max ikke rapportert).
+  - **Nøkkelinnsikt — interaksjon:** preview er verdt +0,02–0,09 R² avhengig av
+    modell/innsats, og innsats betaler FØRST med preview. Kost/effekt-topp:
+    billig modell på max innsats (Luna max 0,288 for $2,57 per 1000 events);
+    Astra xhigh 0,312 for $126,93 = 49x pris for +0,024 (innenfor 1 SE).
+  - **Handling 3c (implementert 2026-10-13):** SYSTEM_PROMPT oppgradert —
+    scenario-plassering (kø 3), buy-side/whisper-bar, reaksjonshistorikk
+    («beats repeatedly sold»-mønster). Preview-trunkering byttet fra head-cut
+    (som kuttet scenario/trading-slutt for lange previews) til verdibasert
+    seksjonskomprimering: consensus kappes først, scenario/katalysator/trading
+    bevarer budsjettet. 28 tester grønne.
+  - Arkiverte opsjonsstats er én sesjon eldre enn live-verdier (forbehold for
+    3b-backtester).
 
 - 2026-10-09 — ingen nye bloggposter (siste er fortsatt 29. sep: previews +
   opsjonsdata for Q4) og GitHub-org uendret (5 repos). Nye detaljer fra

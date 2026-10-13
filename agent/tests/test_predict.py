@@ -138,6 +138,72 @@ def test_a_long_preview_never_costs_the_facts_or_the_statistics() -> None:
     assert "x" * kept in text and "x" * (kept + 1) not in text
 
 
+def _preview_section(title: str, sentinel: str, filler: int) -> str:
+    return f"{title}\n{sentinel}\n" + "z" * filler + "\n"
+
+
+LONG_STRUCTURED_PREVIEW = (
+    "# ACME (ACME) — Q3 FY2026 Earnings Preview\nWritten by Claude Code before the release\n\n"
+    + _preview_section("## 1. Consensus Estimates", "CONSENSUS_SENTINEL", 3000)
+    + _preview_section("## 2. Key Metrics to Watch (ranked)", "KEY_METRICS_SENTINEL", 2000)
+    + _preview_section("## 3. Scenario Analysis", "SCENARIO_SENTINEL", 2000)
+    + _preview_section("## 4. Catalyst Checklist", "CATALYST_SENTINEL", 1500)
+    + _preview_section("## 5. Trading Setup", "TRADING_SENTINEL", 1500)
+    + _preview_section("### Caveats", "CAVEATS_SENTINEL", 800)
+)
+
+
+def test_a_long_structured_preview_spends_the_budget_where_the_signal_lives() -> None:
+    """Every section header survives compression; the scenario grid and
+    catalyst checklist — the ranking anchors — keep (near-)full length
+    while the consensus table (which restates what the surprise benchmark
+    already scores) is cut hardest, and the budget holds exactly."""
+    compressed = predict_module._compress_preview(LONG_STRUCTURED_PREVIEW)
+    assert len(compressed) <= predict_module.PREVIEW_MAX_CHARS
+    for header in (
+        "## 1. Consensus Estimates",
+        "## 2. Key Metrics to Watch",
+        "## 3. Scenario Analysis",
+        "## 4. Catalyst Checklist",
+        "## 5. Trading Setup",
+        "### Caveats",
+    ):
+        assert header in compressed
+    for sentinel in ("SCENARIO_SENTINEL", "CATALYST_SENTINEL", "TRADING_SENTINEL"):
+        assert sentinel in compressed
+    assert "[section trimmed]" in compressed  # consensus went under the knife
+    consensus = compressed[compressed.index("## 1.") : compressed.index("## 2.")]
+    scenario = compressed[compressed.index("## 3.") : compressed.index("## 4.")]
+    assert len(scenario) > len(consensus)
+
+
+def test_when_budgets_overflow_low_value_sections_floor_before_high_value_ones() -> None:
+    """With every section over its budget, the deficit is shaved off the
+    least valuable sections first (caveats before trading setup), so the
+    scenario grid keeps its ranking head start."""
+    heavy = (
+        "# ACME — Q3 FY2026 Earnings Preview\n\n"
+        + _preview_section("## 1. Consensus Estimates", "CONSENSUS_SENTINEL", 6000)
+        + _preview_section("## 2. Key Metrics to Watch (ranked)", "KEY_METRICS_SENTINEL", 2500)
+        + _preview_section("## 3. Scenario Analysis", "SCENARIO_SENTINEL", 2500)
+        + _preview_section("## 4. Catalyst Checklist", "CATALYST_SENTINEL", 2500)
+        + _preview_section("## 5. Trading Setup", "TRADING_SENTINEL", 2500)
+        + _preview_section("### Caveats", "CAVEATS_SENTINEL", 2500)
+    )
+    compressed = predict_module._compress_preview(heavy)
+    assert len(compressed) <= predict_module.PREVIEW_MAX_CHARS
+    assert "SCENARIO_SENTINEL" in compressed
+    assert "TRADING_SENTINEL" in compressed
+    caveats = compressed[compressed.index("### Caveats") :]
+    trading = compressed[compressed.index("## 5. Trading Setup") : compressed.index("### Caveats")]
+    assert len(caveats) < len(trading)
+
+
+def test_a_preview_within_the_budget_passes_through_unchanged() -> None:
+    short = PREVIEW_ITEM["content"]
+    assert predict_module._compress_preview(short) == short
+
+
 def test_optional_items_may_be_absent() -> None:
     facts_only = predict_module.format_materials(_bundle(FACTS_ITEM))
     assert facts_only.startswith("Facts from the earnings call:")
