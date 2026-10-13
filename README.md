@@ -1,7 +1,5 @@
 # Explaining Markets
 
-**Kevin** — live agent that ranks next-day abnormal equity returns around earnings.
-
 [Explaining Markets](https://explainingmarkets.ai/) is a quarterly, out-of-sample benchmark run by Ralph S. J. Koijen and Bradford Levy (University of Chicago Booth) **in collaboration with Optiver**. The working paper is *Assessing the Benefits of Optimized Agentic AI Systems for Asset Pricing*: historical backtests leak, markets are reflexive, so the only honest test is real-time prediction against realized outcomes.
 
 Q4 2026 scoring window: 12 Oct – 15 Dec 2026.
