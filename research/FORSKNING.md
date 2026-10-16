@@ -6,6 +6,58 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W42 (16. okt 2026)
+
+Collect OK: 7 nye arXiv-papers, 0 feilede søk (state.json verifisert: alle 7
+persistert med last_seen 2026-10-16; sete 21 dedup-papers). 2 beholdt, 5
+forkastet. Web-sjekk: ingen nye bloggposter (siste fortsatt «earnings-previews»,
+29. sep) og GitHub-org uendret — men scoring.py-snutter bekrefter
+ranking/tie-break-reglene, og en tredjepartsgjennomgang av arrangørens
+NVDA-eksempel validerer scenario-mapping (kø 3). Detaljer under
+«Plattform-endringer» 2026-10-16.
+
+**Momentum, Commentary Tone, and Earnings Surprise in LLM Financial Forecasts**
+Khaybullina, 2026-10-15 · https://arxiv.org/abs/2610.22043 · cs.LG, cs.AI, cs.CL, q-fin.GN
+Syntetiske earnings-annonser der 20-dagers momentum, non-informational
+kommentar-tone og EPS-beat-mot-manipulert konsensus varieres uavhengig; 2 016
+prompts per modell over seks checkpoints fra fire familier (0,49–7,61B, lokalt
+Q8_0). Funn: primær EPS-kontrakt spenner fra −0,19 til 86,80 prosentpoeng (én
+modell reagerer knapt på selve overraskelsen), signert tone-kontrast skygger
+over EPS i 5 av 6 modeller og momentum i 5 av 6; numerisk diagnostisk
+nøyaktighet 51,0–95,8 %. Måler betingede answer-prefix-skårer — ikke
+kalibrerte sannsynligheter, og etablerer ingen realisert
+avkastningspredikerbarhet. Forbehold: små checkpoints (≤7,6B) — gpt-6-astra
+kan oppføre seg annerledes. Bruk (3c, mate kø 4/5): la ikke tone drive
+prediksjonen — ekstraher konkrete tallfelt (guidance-tall, scenarioplassering)
+i stedet for tone-ratings; verifiser tallene i steg 1 av to-trinns-designen
+slik at lesefeil ikke forveksles med rangeringsinformasjon. Momentum/posisjon
+(previewens trading-setup) ligger utenfor benchmarken, men papiret gir ingen
+evidens for at momentum predikerer car1 — aktuell som 3b-ablasjon, med
+arkiv-forbeholdet i kø 7.
+
+**When Does "Post-Call" Begin? An Availability Contract for Earnings-Call NLP Benchmarks**
+Ma, Koa, Liu & Huang, 2026-10-15 · https://arxiv.org/abs/2610.21659 · q-fin.CP, cs.CL, cs.LG
+Innfører en «Availability Contract» for earnings-call-benchmarks: oppgi
+input-grense, bevis for input-tilgjengelighet, start på utfallsklokken og
+hvilke claims beviset bærer; anvendt på 552 earnings calls fra 24 selskaper.
+Funn: labels og tap avhenger vesentlig av deklarert utfallsklokke selv når
+modellrangeringer ser stabile ut — within-event timing-mismatch overlever
+kronologiske train–test-splits fordi den oppstår inne i enkeltevents, ikke
+på tvers av utvalg. Bruk (3b-hygiene): eksplisitt tilgjengelighetskontrakt per
+inputkilde i arkiv-backtester — facts = levert post-cutoff (lov som levert),
+preview = «illustrative, not strictly point-in-time», arkiverte option-stats
+= én sesjon gamle — så ablasjonstall ikke sammenlignes på tvers av ulike
+tilgjengelighetsregimer (forsterker arkiv-forbeholdet i kø 7). Live-drift er
+urørt: kun leverte materials er post-cutoff-lovlige, eget hentet materiale
+må holde knowledge_cutoff.
+
+(Forkastet: 2610.18435 LLM-peer-review i finans/regnskap — referee-arbeid,
+ikke avkastningsprediksjon; 2610.18052 memory-unlearning i agenter —
+agent-minne utenfor earnings; 2610.17856 MMTA tri-modal
+tidsserie/visjon-benchmark — ingen implementasjonsvei for vår tekst+stats-
+input; 2610.17214 density-matrix-RL — RL-teori; 2610.13432 EWC/mini-KFAC på
+earnings-call-ASR — vi får call facts levert som tekst, ingen ASR-pipeline.)
+
 ### Uke 2026-W41 (9. okt 2026 — ukentlig cron: collect-timeout, web-kompensasjon)
 
 Collect: 0 nye arXiv-papers (søket «earnings-reaksjon» timeoutet; setet står
@@ -103,14 +155,27 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    etter fakta alene. (Plattform-funn 2026-10-09.)
    *Status 2026-10-13: implementert som prompt-instruksjon (vekt-punkt 2);
    gjenstår: deterministisk grid-ekstraksjon + validering mot arkiv/live.*
+   *Status 2026-10-16: tredjepartsgjennomgang (quantide.cn) av arrangørens
+   eget NVDA-eksempel treffer metoden punkt for punkt — realiserte tall (rev
+   $96B, guide $108B, DC $89B) falt i bull-rutene, og realisert +8,1 % landet
+   innenfor bull-rangens estimerte +6 til +11 %; deterministisk
+   grid-ekstraksjon gjenstår som arbeidspunkt.*
 4. **Surprise-residualisering + novelty-/taler-vekting i 3c**: prompt-føring:
    fakta som gjenforteller overraskelsen er allerede i benchmarken (nedveies);
    unikt fremoverrettet call-innhold og analyst-/CFO-uttalelser oppveies.
    (OT-paperet + Sidhu et al., 9. okt.)
+   *Tillegg 2026-10-16 (Khaybullina 2610.22043): vektlegg innhold med påvist
+   alpha — men la ikke non-informational tone drive forecasten; tone-kontrast
+   skygger over EPS i 5/6 modeller og er ingen signalvei for oss. Tallfelt >
+   tone-ratings i ekstraksjonen.*
 5. **Formålsnøytral to-trinns-ekstraksjon i 3c**: steg 1 ekstraherer strukturerte
    felt uten å nevne prediksjonsformålet; steg 2 mappere til percentile.
    Foretrekk direkte spørsmål fremfor konstrukt-ratings, særlig på den
    8000-tegns previewen. (NBER w35142 + SSRN 7177500, 9. okt.)
+   *Tillegg 2026-10-16 (Khaybullina 2610.22043): steg 1 må hente konkrete
+   tallfelt (guidance-tall, scenarioplassering) og verifisere dem mot
+   kildeteksten — numerisk diagnostisk nøyaktighet er 51–96 %, og lesefeil i
+   steg-2-innputten blir støy i rangeringen.*
 6. **Missing-data-grener**: eksplisitte fallback-regler når preview/opsjonsstats
    mangler (LLM-prior-advarsel fra Khetan & Balasubramanian, 8. okt).
 7. **Preview-håndtering etter arrangørens eget mønster** (plattform-funn
@@ -131,6 +196,25 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 9. *(følger fra ny research hver uke)*
 
 ## Plattform-endringer
+
+- 2026-10-16 — ukentlig web-sjekk (cron: web_extract er blokkert mot
+  explainingmarkets.ai, søkesnutter kun):
+  - Blogg: ingen nye poster (siste fortsatt «earnings-previews», 29. sep).
+    Hjemmesiden bekrefter at Q4-scoring kjører 12. okt–15. des — vi er inne i
+    live-vinduet. Ingen nye modell-benchmarks denne uken → OPENAI_MODEL=
+    gpt-6-astra står (R²-tabellen fra 13. okt gjelder fortsatt).
+  - GitHub: org uendret (examples, starter-modal, starter-railway,
+    baseline-earnings-summary + offisielle baselines). scoring.py-snutter
+    bekrefter ranking-reglene: primærmetrikk `delta_r_squared_imputed`
+    (common-sample), første tie-break = høyest `n_obs` (timely coverage FØR
+    imputering), deretter submission-id. Konsekvens: dekning teller dobbelt —
+    imputeringsstraff OG tie-break — kø 1 (parser-robusthet) er dobbelt
+    begrunnet som blokkerende.
+  - Tredjeparts: quantide.cn gjennomgår arrangørens NVDA-eksempel
+    (scenario-plassering → reaksjonsrange; «beat and retreat»: 4 strake
+    beats på rev/EPS/guide, falt påfølgende dag hver gang, snitt ~4,8 %);
+    noah-news dekker kun arbeidsartikkelen. Ingen nye tekniske detaljer
+    utover NOTES.md.
 
 - 2026-10-13 — fulltekstlesing av «earnings-previews»-bloggen (arrangørens
   egne R²-målinger, 546 Q3-2026-events, leaderboard-regresjonen; SE ≈ 0,034–0,036):
