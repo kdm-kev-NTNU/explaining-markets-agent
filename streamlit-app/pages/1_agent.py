@@ -4,7 +4,7 @@ import streamlit as st
 st.set_page_config(page_title="Agenten · Explaining Markets", page_icon="🤖", layout="wide")
 
 st.title("🤖 Agenten: webhook → prediksjon på 5 minutter")
-st.caption("Cogito NTNU · Python · Modal · signerte webhooks · LLM-analyse med deterministisk fallback")
+st.caption("Av Kevin Dennis Mazali · Python · Modal · signerte webhooks · LLM-analyse med deterministisk fallback")
 
 st.markdown(
     """

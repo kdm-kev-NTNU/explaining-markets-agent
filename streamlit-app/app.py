@@ -1,4 +1,4 @@
-"""Explaining Markets · Cogito-agenten — presentasjonsnettside (Streamlit).
+"""Explaining Markets · presentasjonsnettside (Streamlit).
 
 Hjem-side: konkurransen, tallene fra arbeidsartikkelen, vår deltakelse.
 Andre sider: pages/1_agent.py (arkitektur + scoring), pages/2_forskning.py.
@@ -12,7 +12,7 @@ REPO = "kdm-kev-NTNU/explaining-markets-agent"
 REPO_URL = f"https://github.com/{REPO}"
 
 st.set_page_config(
-    page_title="Explaining Markets · Cogito-agenten",
+    page_title="Explaining Markets · AI-agenten",
     page_icon="📈",
     layout="wide",
 )
@@ -43,7 +43,7 @@ def latest_commits() -> list[dict]:
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 📈 Explaining Markets")
-    st.caption("Cogito NTNU-agenten · Q4 2026")
+    st.caption("Presentert av [Kevin Dennis Mazali](https://github.com/kdm-kev-NTNU) · Q4 2026")
     st.page_link("app.py", label="🏠 Konkurransen")
     st.page_link("pages/1_agent.py", label="🤖 Agenten")
     st.page_link("pages/2_forskning.py", label="🔬 Forskning")
@@ -66,12 +66,13 @@ with st.sidebar:
     )
 
 # ── Hjem ───────────────────────────────────────────────────────────────────
-st.title("Explaining Markets — vår AI-agent i konkurranse")
+st.title("Explaining Markets — en AI-agent i live-konkurranse")
 st.markdown(
     "Kvartalsvis, **live out-of-sample benchmark** for AI-systemer som forklarer "
     "aksjeavkastning rundt earnings, arrangert av **Ralph Koijen & Bradford Levy "
-    "(University of Chicago Booth) i samarbeid med Optiver**. Vår deltakelse: en "
-    "autonom webhook-agent bygget av Cogito NTNU, deployet på Modal."
+    "(University of Chicago Booth) i samarbeid med Optiver**. Deltakelsen: en "
+    "autonom webhook-agent bygget av [Kevin Dennis Mazali]"
+    "(https://github.com/kdm-kev-NTNU), deployet på Modal."
 )
 
 c1, c2, c3, c4 = st.columns(4)
@@ -133,25 +134,39 @@ st.caption(
     "GPT-6 Astra xhigh > 0,30."
 )
 
-st.header("Optiver-overflaten — markedets forhåndsfordeling")
+st.header("Optiver-overflaten — hva markedet allerede har priset inn")
 st.markdown(
-    "Væske-rike navn får option-implied statistikk målt **før** release. Det er "
-    "markedets egen sannsynlighetsfordeling — agentens jobb er resten:"
+    "Før et selskap rapporterer tall, priser optionsmarkedet inn markedets "
+    "samlede forventning til kvantehoppet. For de mest handlede selskapene "
+    "leverer konkurransen tre slike tall, målt **rett før release**:"
 )
 opt_df = pd.DataFrame(
     {
         "Statistikk": ["Implied earnings vol", "Implied absolute move", "25-delta skew"],
-        "Hva den er": [
-            "Standardavviket i move-et options priser inn",
-            "Størrelsen på priset move (retningsløs)",
-            "Call IV minus put IV; negativ = dyrere nedsidebeskyttelse",
+        "Hva den forteller": [
+            "Hvor usikkert markedet er om utfallet — spredningen options priser inn",
+            "Hvor stor bevegelse markedet priser inn — retningsløs: ±X %, ikke opp eller ned",
+            "Om nedsidebeskyttelse er dyrere enn oppsidsspill — negativ skew = markedet frykter fall",
         ],
     }
 )
 st.table(opt_df)
+st.markdown(
+    "**Hvorfor det betyr noe:** Se for deg at optionsmarkedet har priset inn "
+    "«±8 % bevegelse» på et selskap før tallene kommer. Da vet alle allerede at "
+    "bevegelsen blir stor — en prediksjon som bare sier «det kommer et stort "
+    "kvantehopp» gir null forklaringskraft, uansett hvor riktig den er.\n\n"
+    "Poenget er å lese av *hva markedet forventer* (disse tre tallene), og så "
+    "forklare hvor utfallet ender **i forhold til den forventningen**: svakere "
+    "eller sterkere enn priset inn — og hvorfor. Overraskende guidance, nytt "
+    "innhold fra call-et, eller signaler optionsmarkedet ikke fanget opp. "
+    "Forklaringskraften som står igjen når det alle allerede vet er tatt høyde "
+    "for, er nøyaktig det ΔR² belønner."
+)
 
 st.divider()
 st.caption(
-    "Bygget av Cogito NTNU · kode: [" + REPO + "](" + REPO_URL + ") · "
+    "Bygget av [Kevin Dennis Mazali](https://github.com/kdm-kev-NTNU) · "
+    f"kode: [{REPO}]({REPO_URL}) · "
     "ingen hemmeligheter i denne appen — alt innhold er offentlige kilder."
 )
