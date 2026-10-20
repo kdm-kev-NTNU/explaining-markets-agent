@@ -1,0 +1,6 @@
+# Dependencies for the Streamlit presentation site (streamlit-app/).
+# Deployed on Streamlit Community Cloud with main file streamlit-app/app.py.
+# The webhook agent itself is dependency-managed via pyproject.toml / uv.
+streamlit>=1.40
+pandas>=2.0
+requests>=2.31

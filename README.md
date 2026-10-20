@@ -42,6 +42,7 @@ flowchart LR
 | [`CONCEPTS.md`](CONCEPTS.md) | Glossary of terms with primary sources |
 | [`agent/`](agent/) | Modal webhook receiver + `predict.py` strategy |
 | [`agent/README.md`](agent/README.md) | Deploy guide (credentials, webhook URL, tests) |
+| [`streamlit-app/`](streamlit-app/) | Presentation site (Streamlit — run locally with `streamlit run app.py`, or deploy `streamlit-app/app.py` to Streamlit Community Cloud) |
 
 ## Docs
 
