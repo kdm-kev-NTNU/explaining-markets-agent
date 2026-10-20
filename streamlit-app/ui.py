@@ -312,6 +312,7 @@ section[data-testid="stSidebar"] {{
   border-style: dashed;
 }}
 .em-lane-tag {{
+  display: block;
   color: {ACCENT};
   font-size: 0.7rem;
   font-weight: 600;
@@ -320,31 +321,30 @@ section[data-testid="stSidebar"] {{
   margin-bottom: 0.25rem;
 }}
 .em-lane-title {{
+  display: block;
   color: {FG};
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0 0 0.25rem 0;
 }}
 .em-lane-cap {{
+  display: block;
   color: {MUTED};
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }}
 .em-flow {{
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: stretch;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  overflow-x: auto;
 }}
 .em-flow-step {{
-  flex: 1 1 140px;
-  min-width: 120px;
+  flex: 1 1 0;
+  min-width: 0;
   border-radius: 10px;
-  padding: 0.9rem 0.85rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.6rem;
+  padding: 0.85rem 0.75rem;
   border: 1px solid {RULE};
   background: {WHITE};
 }}
@@ -353,6 +353,7 @@ section[data-testid="stSidebar"] {{
   border-color: {FG};
 }}
 .em-flow-step .owner {{
+  display: block;
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -363,19 +364,21 @@ section[data-testid="stSidebar"] {{
   color: rgba(255,255,255,0.55);
 }}
 .em-flow-step .title {{
+  display: block;
   font-size: 0.9rem;
   font-weight: 600;
   color: {FG};
-  margin: 0.2rem 0;
+  margin: 0.25rem 0;
 }}
 .em-flow-step.dark .title {{
   color: {WHITE};
 }}
 .em-flow-step .body {{
+  display: block;
   font-size: 0.75rem;
   line-height: 1.4;
   color: {MUTED};
-  margin: 0;
+  margin: 0 0 0.5rem 0;
 }}
 .em-flow-step.dark .body {{
   color: rgba(255,255,255,0.65);
@@ -388,7 +391,6 @@ section[data-testid="stSidebar"] {{
   background: {WASH};
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  align-self: flex-start;
 }}
 .em-flow-step.dark .time {{
   color: {WHITE};
@@ -401,22 +403,17 @@ section[data-testid="stSidebar"] {{
   font-weight: 700;
   font-size: 1.1rem;
   flex: 0 0 auto;
-}}
-.em-chains {{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}}
-.em-chain {{
-  flex: 1 1 280px;
+  padding: 0 0.1rem;
 }}
 .em-chain-title {{
+  display: block;
   font-size: 0.9rem;
   font-weight: 600;
   color: {FG};
   margin: 0 0 0.15rem 0;
 }}
 .em-chain-sub {{
+  display: block;
   font-size: 0.75rem;
   color: {MUTED};
   margin-bottom: 0.75rem;
@@ -425,7 +422,7 @@ section[data-testid="stSidebar"] {{
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   font-size: 0.8rem;
   color: {MUTED};
 }}
@@ -650,23 +647,55 @@ def paper_card(title: str, meta: str) -> None:
     )
 
 
-def _flow_step(owner: str, title: str, body: str, time: str | None = None, dark: bool = False) -> str:
+def _flow_step(
+    owner: str,
+    title: str,
+    body: str,
+    time: str | None = None,
+    dark: bool = False,
+) -> str:
+    """Én flat div med spans — nestede divs ødelegges av Streamlit-sanitizer."""
     cls = "em-flow-step dark" if dark else "em-flow-step"
     time_html = f'<span class="time">{time}</span>' if time else ""
-    return f"""
-<div class="{cls}">
-  <div>
-    <div class="owner">{owner}</div>
-    <div class="title">{title}</div>
-    <p class="body">{body}</p>
-  </div>
-  {time_html}
-</div>
-"""
+    return (
+        f'<div class="{cls}">'
+        f'<span class="owner">{owner}</span>'
+        f'<span class="title">{title}</span>'
+        f'<span class="body">{body}</span>'
+        f"{time_html}"
+        f"</div>"
+    )
+
+
+def _flow_row(steps: list[tuple], *, with_time: bool = False) -> str:
+    """Steg + piler i én flat rad (ingen nestede wrapper-divs per celle)."""
+    parts: list[str] = []
+    for i, step in enumerate(steps):
+        if with_time:
+            owner, title, body, time, dark = step
+            parts.append(_flow_step(owner, title, body, time, dark))
+        else:
+            owner, title, body = step
+            parts.append(_flow_step(owner, title, body))
+        if i < len(steps) - 1:
+            parts.append('<span class="em-arrow">→</span>')
+    return f'<div class="em-flow">{"".join(parts)}</div>'
+
+
+def _render_html(html: str) -> None:
+    """st.html unngår markdown-sanitizer; faller tilbake til markdown."""
+    if hasattr(st, "html"):
+        st.html(html)
+    else:
+        st.markdown(html, unsafe_allow_html=True)
 
 
 def architecture_diagram() -> None:
-    """To-baners arkitekturdiagram: live-flyt + bakgrunnsløkker."""
+    """To-baners arkitekturdiagram: live-flyt + bakgrunnsløkker.
+
+    Struktur littegrunt med Streamlit-kolonner slik at Streamlit ikke
+    kan ødelegge nestede HTML-divs (som ellers viser rå «</div>» i UI).
+    """
     live_steps = [
         ("Konkurransen", "Selskap rapporterer", "Plattformen sender et signert varsel til agenten.", "0 s", True),
         ("Min agent", "Mottak", "Sjekker at varselet er ekte og svarer «mottatt».", "under 20 s", False),
@@ -674,12 +703,6 @@ def architecture_diagram() -> None:
         ("Min agent", "AI-vurdering", "GPT rangerer aksjen fra 0 (fall) til 1 (hopp). Reserve: enkel opsjonsregel.", "under 5 min", False),
         ("Konkurransen", "Poeng", "Rangeringen sendes inn og sammenlignes med fasit.", "neste børsdag", True),
     ]
-    flow_parts: list[str] = []
-    for i, (owner, title, body, time, dark) in enumerate(live_steps):
-        flow_parts.append(_flow_step(owner, title, body, time, dark))
-        if i < len(live_steps) - 1:
-            flow_parts.append('<div class="em-arrow">→</div>')
-
     deploy = [
         ("GitHub", "Ny kode", "Endringen pushes til repoet."),
         ("pytest", "Tester", "Må være grønne, ellers stopper alt."),
@@ -691,44 +714,41 @@ def architecture_diagram() -> None:
         ("FORSKNING.md", "Idébank", "Neste forbedring av AI-vurderingen."),
     ]
 
-    def chain_html(label: str, sub: str, steps: list[tuple[str, str, str]]) -> str:
-        parts: list[str] = []
-        for i, (owner, title, body) in enumerate(steps):
-            parts.append(_flow_step(owner, title, body))
-            if i < len(steps) - 1:
-                parts.append('<div class="em-arrow">→</div>')
-        return f"""
-<div class="em-chain">
-  <div class="em-chain-title">{label}</div>
-  <div class="em-chain-sub">{sub}</div>
-  <div class="em-flow">{''.join(parts)}</div>
-</div>
-"""
+    _render_html(
+        '<div class="em-lane">'
+        '<span class="em-lane-tag">Live · hver rapport</span>'
+        '<span class="em-lane-title">Når et selskap legger frem tall</span>'
+        '<span class="em-lane-cap">Fem steg, helt automatisk. Agenten har fem minutter '
+        "fra varselet kommer til rangeringen er sendt inn.</span>"
+        f"{_flow_row(live_steps, with_time=True)}"
+        "</div>"
+    )
 
-    st.markdown(
-        f"""
-<div class="em-arch">
-  <div class="em-lane">
-    <div class="em-lane-tag">Live · hver rapport</div>
-    <div class="em-lane-title">Når et selskap legger frem tall</div>
-    <div class="em-lane-cap">Fem steg, helt automatisk. Agenten har fem minutter fra varselet kommer til rangeringen er sendt inn.</div>
-    <div class="em-flow">{''.join(flow_parts)}</div>
-  </div>
-  <div class="em-lane em-lane-bg">
-    <div class="em-lane-tag">I bakgrunnen</div>
-    <div class="em-lane-title">Slik holdes agenten oppdatert</div>
-    <div class="em-lane-cap">To separate løkker som ikke påvirker en pågående prediksjon.</div>
-    <div class="em-chains">
-      {chain_html("Utrulling", "Ved hver kodeendring", deploy)}
-      {chain_html("Læring", "Hver fredag kl. 09:15", learn)}
-    </div>
-  </div>
-  <div class="em-legend">
-    <div class="em-legend-item"><span class="em-swatch dark"></span> Konkurransens plattform</div>
-    <div class="em-legend-item"><span class="em-swatch mine"></span> Min kode</div>
-    <div class="em-legend-item"><span class="em-swatch bg"></span> Skjer i bakgrunnen</div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
+    _render_html(
+        '<div class="em-lane em-lane-bg">'
+        '<span class="em-lane-tag">I bakgrunnen</span>'
+        '<span class="em-lane-title">Slik holdes agenten oppdatert</span>'
+        '<span class="em-lane-cap">To separate løkker som ikke påvirker en pågående prediksjon.</span>'
+        "</div>"
+    )
+    col_a, col_b = st.columns(2, gap="large")
+    with col_a:
+        _render_html(
+            '<span class="em-chain-title">Utrulling</span>'
+            '<span class="em-chain-sub">Ved hver kodeendring</span>'
+            f"{_flow_row(deploy)}"
+        )
+    with col_b:
+        _render_html(
+            '<span class="em-chain-title">Læring</span>'
+            '<span class="em-chain-sub">Hver fredag kl. 09:15</span>'
+            f"{_flow_row(learn)}"
+        )
+
+    _render_html(
+        '<div class="em-legend">'
+        '<span class="em-legend-item"><span class="em-swatch dark"></span> Konkurransens plattform</span>'
+        '<span class="em-legend-item"><span class="em-swatch mine"></span> Min kode</span>'
+        '<span class="em-legend-item"><span class="em-swatch bg"></span> Skjer i bakgrunnen</span>'
+        "</div>"
     )
