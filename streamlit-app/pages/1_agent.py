@@ -1,4 +1,4 @@
-"""Side 2 — Agenten: arkitektur, produksjonsklokker, scoring og signal-design."""
+"""Side 2. Agenten: arkitektur, produksjonsklokker, scoring og signal-design."""
 import streamlit as st
 
 st.set_page_config(page_title="Agenten · Explaining Markets", page_icon="🤖", layout="wide")
@@ -33,7 +33,7 @@ clocks = {
 st.table(clocks)
 st.info(
     "Strategi: **ACK umiddelbart, prediker deretter.** Kun den *første* gyldige "
-    "prediksjonen per event scoret — late, tidlige og dupliserte poster aksepteres "
+    "prediksjonen per event scoret; late, tidlige og dupliserte poster aksepteres "
     "men ignoreres i rangeringen."
 )
 
@@ -45,30 +45,30 @@ st.markdown("ΔR² er leaderboard-metrikken: forklart variasjon **utover** det m
 
 s1, s2, s3 = st.columns(3)
 with s1:
-    st.error("**Konstant ⇒ ΔR² = 0, nøyaktig.** Flat 0,5-baseline tjener ingenting — den er kun siste utvei slik at et missed event ikke imputeres mot deg.")
+    st.error("**Konstant ⇒ ΔR² = 0, nøyaktig.** Flat 0,5-baseline tjener ingenting; den er kun siste utvei slik at et missed event ikke imputeres mot deg.")
 with s2:
-    st.error("**Affin remapping er uscoret.** p → a + b·p endrer ikke ΔR². Kalibrering og fortegnshypping hjelper ikke — kun rangering.")
+    st.error("**Affin remapping er uscoret.** p → a + b·p endrer ikke ΔR². Kalibrering og fortegnshypping hjelper ikke: kun rangering.")
 with s3:
     st.error("**Å hoppe over events straffes.** Missed events imputeres med din egen prediksjonsmiddel. Alltid lever noe i vinduet.")
 
 st.header("Signal-design: hva vi vekter")
 st.markdown(
-    "Benchmarken priser allerede rå surprise — «beat/miss» gir null ΔR². Vekten "
+    "Benchmarken priser allerede rå surprise, «beat/miss» gir null ΔR². Vekten "
     "ligger på det surprise *ikke* fanger:"
 )
 g1, g2 = st.columns(2)
 with g1:
     st.markdown(
         "- **Guidance og utsikter** mot den tidligere banen\n"
-        "- **Framoverskuende call-innhold** — nytt vs gjentatt disclosure\n"
-        "- **Optionsposisjonering** — 25-delta skew som retningsvinkt, implied move som konfidensmodulator\n"
-        "- **Scenario-plassering** — realiserte fakta mot previewens bull/base/bear-grid"
+        "- **Framoverskuende call-innhold**: nytt vs gjentatt disclosure\n"
+        "- **Optionsposisjonering**: 25-delta skew som retningsvinkt, implied move som konfidensmodulator\n"
+        "- **Scenario-plassering**: realiserte fakta mot previewens bull/base/bear-grid"
     )
 with g2:
     st.markdown(
         "**Innebygde forbehold i prompt-stien:**\n"
         "- Ikke dobbelttell implied move når previewen allerede bærer option-størrelsen\n"
-        "- Tynne materials (ingen preview/optionstatistikk — vanlig på illikvide navn) får egen missing-data-gren\n"
+        "- Tynne materials (ingen preview/optionstatistikk, vanlig på illikvide navn) får egen missing-data-gren\n"
         "- Når LLM-en er utilgjengelig: deterministisk skew-fallback varierer fortsatt per event; konstant 0,5 er kun siste leveringssti"
     )
 

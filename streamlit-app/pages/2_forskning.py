@@ -1,4 +1,4 @@
-"""Side 3 — Forskning: ukentlig kuratert arXiv-scan, rendret fra repoet."""
+"""Side 3. Forskning: ukentlig kuratert arXiv-scan, rendret fra repoet."""
 import streamlit as st
 import requests
 
@@ -12,7 +12,7 @@ st.markdown(
     "En cron-jobb kjører hver **fredag kl. 09:15**: seks arXiv-søk, dedup mot "
     "state, og et LLM-filter som vurderer hvert paper mot scoring-mekanikken "
     "(ΔR² over surprise-benchmarken; kalibrering scoret ikke). Det som holder, "
-    "lander i `research/FORSKNING.md` i repoet — samme fil denne siden leser live."
+    "lander i `research/FORSKNING.md` i repoet, samme fil denne siden leser live."
 )
 
 

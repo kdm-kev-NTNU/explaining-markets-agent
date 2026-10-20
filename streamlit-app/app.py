@@ -66,7 +66,7 @@ with st.sidebar:
     )
 
 # ── Hjem ───────────────────────────────────────────────────────────────────
-st.title("Explaining Markets — en AI-agent i live-konkurranse")
+st.title("Explaining Markets: en AI-agent i live-konkurranse")
 st.markdown(
     "Kvartalsvis, **live out-of-sample benchmark** for AI-systemer som forklarer "
     "aksjeavkastning rundt earnings, arrangert av **Ralph Koijen & Bradford Levy "
@@ -86,13 +86,13 @@ st.divider()
 st.header("Spørsmålet agenten svarer på")
 st.markdown(
     "> Etter en earningsmelding: **hvor lander denne aksjens neste-dags "
-    "markedsjusterte avkastning i kvartalets tverrsnitt** — fra 0 (mest negative) "
+    "markedsjusterte avkastning i kvartalets tverrsnitt**, fra 0 (mest negative) "
     "til 1 (mest positive)?"
 )
 st.markdown(
     "Ett event gir ett utfall: `car1` (neste-dags kumulativ avviksavkastning), "
     "percentilrangert på tvers av alle earnings i kvartalet. Scoren er "
-    "**ΔR² — forklart variasjon utover earnings-surprise-benchmarken**. En konstant "
+    "**ΔR²: forklart variasjon utover earnings-surprise-benchmarken**. En konstant "
     "0,5-prediksjon scorer nøyaktig null: det er kun *rangeringsinformasjon* som teller."
 )
 
@@ -101,7 +101,7 @@ col_a, col_b = st.columns(2)
 with col_a:
     st.markdown(
         "**Look-ahead bias.** Historiske backtester trenes på data som inkluderer "
-        "utfallet — informasjon man ikke hadde i beslutningsøyeblikket. Konkurransen "
+        "utfallet, informasjon man ikke hadde i beslutningsøyeblikket. Konkurransen "
         "håndhever et *knowledge cutoff* per event."
     )
 with col_b:
@@ -113,7 +113,7 @@ with col_b:
 st.markdown(
     "Arbeidsartikkelen (*Assessing the Benefits of Optimized Agentic AI Systems "
     "for Asset Pricing*): de beste optimaliserte systemene **mer enn dobler "
-    "forklart variasjon — R² ca. 8 % → nær 20 %**."
+    "forklart variasjon: R² ca. 8 % → nær 20 %**."
 )
 
 st.header("Tallene fra arrangørens Q3-måling")
@@ -134,7 +134,7 @@ st.caption(
     "GPT-6 Astra xhigh > 0,30."
 )
 
-st.header("Optiver-overflaten — hva markedet allerede har priset inn")
+st.header("Optiver-overflaten: hva markedet allerede har priset inn")
 st.markdown(
     "Før et selskap rapporterer tall, priser optionsmarkedet inn markedets "
     "samlede forventning til kvantehoppet. For de mest handlede selskapene "
@@ -144,9 +144,9 @@ opt_df = pd.DataFrame(
     {
         "Statistikk": ["Implied earnings vol", "Implied absolute move", "25-delta skew"],
         "Hva den forteller": [
-            "Hvor usikkert markedet er om utfallet — spredningen options priser inn",
-            "Hvor stor bevegelse markedet priser inn — retningsløs: ±X %, ikke opp eller ned",
-            "Om nedsidebeskyttelse er dyrere enn oppsidsspill — negativ skew = markedet frykter fall",
+            "Hvor usikkert markedet er om utfallet: spredningen options priser inn",
+            "Hvor stor bevegelse markedet priser inn (retningsløs: ±X %, ikke opp eller ned)",
+            "Om nedsidebeskyttelse er dyrere enn oppsidsspill (negativ skew = markedet frykter fall)",
         ],
     }
 )
@@ -154,11 +154,11 @@ st.table(opt_df)
 st.markdown(
     "**Hvorfor det betyr noe:** Se for deg at optionsmarkedet har priset inn "
     "«±8 % bevegelse» på et selskap før tallene kommer. Da vet alle allerede at "
-    "bevegelsen blir stor — en prediksjon som bare sier «det kommer et stort "
+    "bevegelsen blir stor; en prediksjon som bare sier «det kommer et stort "
     "kvantehopp» gir null forklaringskraft, uansett hvor riktig den er.\n\n"
     "Poenget er å lese av *hva markedet forventer* (disse tre tallene), og så "
     "forklare hvor utfallet ender **i forhold til den forventningen**: svakere "
-    "eller sterkere enn priset inn — og hvorfor. Overraskende guidance, nytt "
+    "eller sterkere enn priset inn, og hvorfor. Overraskende guidance, nytt "
     "innhold fra call-et, eller signaler optionsmarkedet ikke fanget opp. "
     "Forklaringskraften som står igjen når det alle allerede vet er tatt høyde "
     "for, er nøyaktig det ΔR² belønner."
@@ -168,5 +168,5 @@ st.divider()
 st.caption(
     "Bygget av [Kevin Dennis Mazali](https://github.com/kdm-kev-NTNU) · "
     f"kode: [{REPO}]({REPO_URL}) · "
-    "ingen hemmeligheter i denne appen — alt innhold er offentlige kilder."
+    "ingen hemmeligheter i denne appen; alt innhold er offentlige kilder."
 )
