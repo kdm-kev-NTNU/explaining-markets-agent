@@ -6,6 +6,53 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W43 (23. okt 2026)
+
+Collect OK: 8 nye arXiv-papers, 0 feilede søk (state.json verifisert: alle 8
+persistert med last_seen 2026-10-23; sete vokst 28 → 36 seen-papers). 2
+beholdt, 6 forkastet. Web-sjekk: bloggen uendret (siste fortsatt
+«earnings-previews», 29. sep) og ingen nye modell-benchmarks — men
+GitHub-orgen har 6 repos: model-card-skill nyoppdaget for oss (se
+«Plattform-endringer» 2026-10-23 og ny kø 9).
+
+**From SEC Filings to Financial Signals: Evaluating LLMs on Stock Market Reactions and Analyst Forecasts**
+Wang, Ji, Wang, Mansi, Lu & Chen, 2026-10-16 · https://arxiv.org/abs/2610.24268 · cs.AI
+Evaluerer prompted zero-shot-output fra 13 generelle og finans-spesialiserte
+LLM-er på 45 964 Form 10-Q-filingeventer (2001–2024), med MD&A-tekst koblet
+mot tverrsnitts-rangeringer av fundamentaltall, pre-filing-analystestimater
+og realiserte abnormale avkastninger — samme målvariabel-familie som vår
+car1. Funn: direkte LLM-forecast ligger i snitt på 43,4-persentilen i
+analystfordelingen og slår ikke enkeltanalytikere konsistent; konsensus-
+ankring hever gjennomsnittlig inside-range-andel fra 41,1 % til 59,5 %, men
+øker EPS-feilen. For oss: (i) direkte «prognotiser avkastningen»-prompting
+er underlegen strukturert ekstraksjon; (ii) konsensus-ankrede outputs
+rekoderer nettopp det surprise-benchmarken allerede har — ΔR²-verdiløs.
+Bruk (3c, forsterker kø 4+5): ekstrahér avviks-felt (hva i facts/preview
+avviker fra forventet), aldri nivåer; aldri be om direkte prognose.
+Forbehold: 10-Q MD&A er ikke earnings-call facts — designevidens, ikke
+metode.
+
+**Same Probabilities, Different Advice: Gain-Loss Framing Effects in High-Stakes LLM Decision Support**
+Zhang, Cui, Zhu, Lu, Guo & Han, 2026-10-21 · https://arxiv.org/abs/2610.29294 · cs.AI, cs.CL
+FrameBench-HPS: 2 880 prompts fra 240 høyinnsats-scenarioer (helse, finans,
+utdanning/karriere, juridisk) over sju LLM-er. Gain-loss-ramming av samme
+sannsynlighet skifter anbefalingskategori i 32,4 % av komplette grupper
+(mest usikkerhetsskifter, ikke reversaler), holder under parafraser og
+overstiger vanlig generasjonsvariasjon; sannsynlyskanonialisering reduserer
+effekten betydelig. Previewen mizer allerede gain-/loss-rammer (bull
++6–11 % vs bear −8–13 %). Bruk (3c, mate kø 5): kanoniser retningen i
+ekstraksjonsspørsmålene — elisiter alltid P(opp) i samme ramme, eller begge
+retninger og forlikt deterministisk, før percentile-mapping; billig
+prompt-hygiene mot rangeringsstøy. Forbehold: ikke earnings-spesifikt —
+robusthetshygiene, ikke signalkilde.
+
+(Forkastet: 2610.31012 «Artificial Wisdom»-rammeverk — beslutningsregulering,
+ikke avkastning; 2610.28787 kartell-RL — prisagent-kollusjon; 2610.24520
+HABIT-Bench — agent-minne; 2610.22980 KiranaBench — butikksimulering;
+2610.26887 Navalia — post-trening av cowork-agenter på syntetiske
+finansoppgaver, ingen vei til vår tekst+stats-prediksjon; 2610.28653
+SciTaste — forskningsdomme-benchmark.)
+
 ### Uke 2026-W42 (16. okt 2026)
 
 Collect OK: 7 nye arXiv-papers, 0 feilede søk (state.json verifisert: alle 7
@@ -176,6 +223,16 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    tallfelt (guidance-tall, scenarioplassering) og verifisere dem mot
    kildeteksten — numerisk diagnostisk nøyaktighet er 51–96 %, og lesefeil i
    steg-2-innputten blir støy i rangeringen.*
+   *Tillegg 2026-10-23 (Wang et al. 2610.24268): direkte zero-shot-
+   prognoser lander i snitt på 43,4-persentilen av analystfordelingen og
+   slår ikke enkeltanalytikere konsistent; konsensus-ankring øker
+   inside-rate (41,1 → 59,5 %) men øker EPS-feil — rekoderer altså
+   konsensusinformasjon benchmarken allerede har. Ekstrahér avviks-felt,
+   ikke nivåer.*
+   *Tillegg 2026-10-23 (Zhang et al. 2610.29294): kanoniser
+   sannsynlighetretningen i promptene — gain/loss-ramming skifter
+   anbefalingskategori i 32,4 % av grupper; spør alltid i samme retning
+   (eller begge + deterministisk forlikning) før percentile-mapping.*
 6. **Missing-data-grener**: eksplisitte fallback-regler når preview/opsjonsstats
    mangler (LLM-prior-advarsel fra Khetan & Balasubramanian, 8. okt).
 7. **Preview-håndtering etter arrangørens eget mønster** (plattform-funn
@@ -193,9 +250,44 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    fallback-former); bloggen viser Astra 0,309–0,312, så effort-parameter er
    margenal. Gjenstår: overvåk om LLM_MAX_TOKENS=3000 kapper resonneringen
    (tegn: hyppige «[WARN] Using option-stats fallback» i Modal-loggen).*
-9. *(følger fra ny research hver uke)*
+9. **Model card — prize-eligibility (F1/F4; ikke ΔR², men hard krav-frist)**:
+   arrangørens `model-card-skill` (github.com/explaining-markets/
+   model-card-skill) skriver konkurransens standardkort (`em-model-card
+   v1`) fra submissionskoden. Kjør skillen i mappen med agent-koden
+   (default: IP-beskyttet nivå), valider med `validate_card.py`, lim inn
+   i portalen (Public Profile → Model card → Preview → Publish).
+   Kortet er public ved publisering og må holdes oppdatert ved
+   materielle metodeendringer (Official Rules §3). Frist: Q4-slutt
+   15. des. (Plattform-funn 2026-10-23.)
+10. *(følger fra ny research hver uke)*
 
 ## Plattform-endringer
+
+- 2026-10-23 — ukentlig web-sjekk (web_search; explainingmarkets.ai
+  fortsatt kun søkesnutter i cron — GitHub fungerte via web_extract):
+  - Blogg: ingen nye poster (siste fortsatt «earnings-previews»,
+    29. sep). Hjemmesiden bekrefter Q4-scoring 12. okt–15. des — vi er
+    inne i live-vinduet. Ingen nye modell-benchmarks → OPENAI_MODEL=
+    gpt-6-astra står (R²-tabellen fra 13. okt gjelder fortsatt;
+    søksnuttene viser Astra 0,312 xhigh med preview).
+  - GitHub-org: 6 repos. Nyoppdaget for oss (opprettet 21. sep, oversett
+    i tidligere søkesnutt-sjekker): **model-card-skill** — Agent Skill
+    (Claude Code/Codex/Cursor/Gemini CLI/Copilot) som leser
+    submissionskoden og fyller konkurransens standard model card-format
+    (`em-model-card v1`: sammendrag + seksraders klassifiseringstabell
+    + fem korte seksjoner) til `MODEL_CARD.md`; to IP-nivåer («Protect
+    my IP» default — ingen prompts/modellversjoner/settings — vs
+    «Showcase my work»); validator `validate_card.py` (Python 3.8+,
+    ingen deps, `--json`), taxonomy.json versjonert med CHANGELOG.
+    Submission krever publisert model card i portalen for
+    prize-eligibility. Kø 9.
+  - Ellers uendret: examples sist pushet 10. okt, starter-modal/
+    starter-railway/baseline-earnings-summary 30. sep — ingen
+    SDK-endringer som berører 2c/3c denne uken.
+  - Leaderboard-sidene bruker kjente parametre (2026Q4, -CONTEST,
+    own/common sample) — ingen strukturendringer utover NOTES.md.
+    Presse (UChicago News + Booth Review) dekker arbeidsartikkelen
+    uten nye tekniske detaljer.
 
 - 2026-10-16 — ukentlig web-sjekk (cron: web_extract er blokkert mot
   explainingmarkets.ai, søkesnutter kun):
