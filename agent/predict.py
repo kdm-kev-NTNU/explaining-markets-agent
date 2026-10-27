@@ -25,7 +25,7 @@ import re
 import httpx
 from openai import BadRequestError, OpenAI
 
-from explaining_markets.config import openai_model
+from explaining_markets.config import openai_model, openai_reasoning_effort
 
 _client: OpenAI | None = None  # lazy: importing this file must not require a key
 
@@ -46,6 +46,22 @@ _COMPLETION_PARAM_SETS = (
     {"max_tokens": LLM_MAX_TOKENS, "temperature": 0.3},  # legacy endpoint
     {"max_tokens": LLM_MAX_TOKENS},  # legacy endpoint, temperature unsupported
 )
+
+
+def _completion_param_sets() -> tuple[dict, ...]:
+    """Parameter forms, newest first.
+
+    GPT-6 rejects temperature, so a reasoning-effort call is its own first
+    form: max_completion_tokens plus OPENAI_REASONING_EFFORT, no temperature.
+    A 400 "Unsupported parameter/value" falls through to the forms above.
+    """
+    effort = openai_reasoning_effort()
+    if not effort:
+        return _COMPLETION_PARAM_SETS
+    return (
+        {"max_completion_tokens": LLM_MAX_TOKENS, "reasoning_effort": effort},
+        *_COMPLETION_PARAM_SETS,
+    )
 
 FACTS_ID = "earnings-call-facts"
 PREVIEW_ID = "earnings-preview"
@@ -420,7 +436,11 @@ def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str
     ]
     resp = None
     last_exc: Exception | None = None
-    for extra in _COMPLETION_PARAM_SETS:
+    print(
+        f"[INFO] LLM call for {ticker}: model={openai_model()} "
+        f"reasoning_effort={openai_reasoning_effort() or 'default'}"
+    )
+    for extra in _completion_param_sets():
         try:
             resp = _client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
                 model=openai_model(), messages=messages, **extra
@@ -429,6 +449,7 @@ def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str
         except BadRequestError as exc:
             if "Unsupported" not in str(exc):
                 raise  # a real failure — let the fallback chain handle it
+            print(f"[WARN] LLM parameter form rejected for {ticker}: {exc}")
             last_exc = exc
     if resp is None:
         raise last_exc  # every parameter form rejected — never seen, but don't loop

@@ -12,6 +12,9 @@ Optional:
   OPENAI_API_KEY     when set, predict.py makes real LLM calls; otherwise it
                      falls back to a 0.5 baseline so the round-trip still works
   OPENAI_MODEL       model name for predict.py (default: gpt-5.4-nano)
+  OPENAI_REASONING_EFFORT
+                     when set (e.g. xhigh), sent as reasoning_effort on the
+                     GPT-6 request. Unset means the parameter is omitted.
 """
 
 from __future__ import annotations
@@ -51,3 +54,9 @@ def _require(name: str) -> str:
 
 def openai_model() -> str:
     return os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+
+
+def openai_reasoning_effort() -> str | None:
+    """Reasoning effort for GPT-6 calls. None omits the parameter."""
+    value = os.environ.get("OPENAI_REASONING_EFFORT", "").strip()
+    return value or None

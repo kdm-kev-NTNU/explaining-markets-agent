@@ -249,3 +249,67 @@ def test_a_kind_this_code_has_never_seen_is_never_an_error() -> None:
 def test_anything_that_is_not_a_bundle_formats_to_nothing() -> None:
     for odd in (None, [], "text", {"summary": "legacy shape"}, {"items": "nope"}, {"items": []}):
         assert predict_module.format_materials(odd) == ""
+
+
+def test_reasoning_effort_is_a_separate_first_form(monkeypatch) -> None:
+    """Unset effort leaves the existing chain untouched. Set effort is the
+    first GPT-6 form: max_completion_tokens plus that effort, no temperature,
+    and the old forms stay behind it so an unsupported effort still falls through."""
+    monkeypatch.delenv("OPENAI_REASONING_EFFORT", raising=False)
+    assert predict_module._completion_param_sets() == predict_module._COMPLETION_PARAM_SETS
+
+    monkeypatch.setenv("OPENAI_REASONING_EFFORT", "max")
+    sets = predict_module._completion_param_sets()
+    assert sets[0] == {
+        "max_completion_tokens": predict_module.LLM_MAX_TOKENS,
+        "reasoning_effort": "max",
+    }
+    assert "temperature" not in sets[0]
+    assert sets[1:] == predict_module._COMPLETION_PARAM_SETS
+
+
+class _CapturingCompletions:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+
+        class _Message:
+            content = '{"predicted_percentile": 0.61, "reason": "guidance raised"}'
+
+        class _Choice:
+            message = _Message()
+
+        class _Response:
+            choices = [_Choice()]
+
+        return _Response()
+
+
+class _CapturingClient:
+    def __init__(self) -> None:
+        self.completions = _CapturingCompletions()
+        self.chat = self
+
+
+def test_ask_llm_sends_luna_max_without_temperature(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-6-luna")
+    monkeypatch.setenv("OPENAI_REASONING_EFFORT", "max")
+    client = _CapturingClient()
+    monkeypatch.setattr(predict_module, "_client", client)
+
+    value = predict_module._ask_llm(
+        ticker="AAPL",
+        event_type="EARNINGS_RELEASE",
+        materials="facts",
+        option_signal="skew",
+    )
+
+    assert value == 0.61
+    sent = client.completions.calls[0]
+    assert sent["model"] == "gpt-6-luna"
+    assert sent["reasoning_effort"] == "max"
+    assert sent["max_completion_tokens"] == predict_module.LLM_MAX_TOKENS
+    assert "temperature" not in sent
