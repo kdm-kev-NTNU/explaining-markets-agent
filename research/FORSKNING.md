@@ -6,6 +6,91 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W45 (6. nov 2026)
+
+Collect OK: 7 nye arXiv-papers, 0 feilede søk. 3 beholdt, 4 forkastet.
+(Merk: ingen W44-oppføring i denne fila — forrige oppdatering er 23. okt;
+cron-kjøringen 30. okt har ikke skrevet til dokumentet. Ukens `state.json`
+har derimot alle 7 persistert, så dedup-setet er intakt — kun
+dokumentasjonen har et hull.)
+
+Ukens treff er metodiske snarere enn signalmessige: to av tre papers er
+*negative* resultater om hvor mye tekst- og identitetsinformasjon egentlig
+tilfører utover offentlig selskapsinformasjon — som er nøyaktig vår
+ΔR²-definisjon. Det viktigste nye arbeidspunktet er en identitets-ablation
+(kø 10): vi har hele tiden antatt at rangeringsinfo kommer fra materials,
+men vet ikke hvor mye som kommer fra modellens minne om tickeren.
+
+**Thinking Fast, Trading Late: System One Decision Models vs the Market** (OLIVIA-protokollen)
+Dehkordi, Kargarzadeh, Khaledian, Parvini, Ghatak & Khaledian, 2026-11-02 ·
+https://arxiv.org/abs/2611.03985 · cs.AI, cs.CL, cs.LG, q-fin.ST
+Foreslår OLIVIA, en protokoll som skal drepe tre gratis-lunsjer i
+avkastningsprediksjon med LLM: point-in-time-input med **maskerte
+selskapsnavn**, seleksjon kun på valideringsdata, analyseplan fryst med
+kryptografisk hash, og én avblinding av testperioden via logget lås. Anvendt
+på nyhetslesing for S&P 500: en finstilt modell holdt IC 0,055/0,065 i to
+valideringskvartaler, men falt til 0,020 (t = 1,7) i den blindede
+jan–jul-2026-testen; kommersielle modeller treffer nattbevegelsen fram til
+åpning (IC 0,074–0,077), men ikke bevegelsen etter åpning. To funn treffer
+oss direkte: (i) **maskering skjuler navn, ikke selskaper** — kommersielle
+modeller identifiserer det maskerte selskapet i 62–74 % av tilfellene mot en
+28 %-baseline. Det er samme mekanisme som Khetan & Balasubramanian
+(«Thin Evidence, Thick Priors», kø 6) og restatering-papiret under: modellen
+leser seg til hvem det er og henter et narrativ fra treningen. (ii) Ingen
+modell klarte å skille over- fra underreaksjon, og ingen pre-registrert
+strategi overlevde kostnader + deflated Sharpe — et nyttig tak på
+forventningene til rene nyhetssignaler. **Bruk:** kø 10 (identitets-ablation
+i 3b/3c) og 3b-valideringshygiene (frys analyseplan før arkivkjøring, ikke
+etter). Forbehold: nyhetsstrøm før åpning ≠ våre post-call-materials, så
+«priced at the open»-funnet rammer ikke car1 direkte — det rammer
+eventuelle eksterne nyhetssignaler vi måtte vurdere i kø 2/4.
+
+**Do Earnings Calls Help Predict Financial Restatements? Evaluating Text Beyond Public Firm Information**
+Efe, Sapra & Ahmed, 2026-10-31 · https://arxiv.org/abs/2611.01123 · cs.CL, cs.LG
+109 call-transkript før restateringer mot 218 matchede kontroller: call-teksten
+predikerer restateringer bedre enn sjanse, men gir **ingen påvisbar
+rangeringsgevinst utover offentlig selskapsinformasjon** (en modell med kun
+offentlig info scorer marginalt høyere; 95 %-intervallet for tekstens bidrag
+er −0,05 til 0,11 AUROC). Klassifikatoren vinner hovedsakelig på
+SPAC-relaterte restateringer — altså en artefakt av utvalget, ikke et språklig
+varselsignal. LLM-en scorer høyere, men navngir eksakt ticker i **66 % av
+maskerte transkript**, og modellen er lansert etter at restateringene skjedde.
+**Bruk:** dette er den reneste demonstrasjonen av testen vi bør kjøre før vi
+adopterer en ny tekstfeature (kø 5): (1) bygg en offentlig-info-baseline
+først, (2) mål inkrementell rangeringsevne mot den, (3) sjekk om modellen
+egentlig bare kjenner selskapet. Forventningen vår om at «unik call-tekst»
+(OT-papiret, kø 4) bærer inkrementell kraft står, men listen for hva som
+teller som bevis heves. Forbehold: restatering ≠ avkastningsreaksjon, og
+n = 109 er lite.
+
+**LENS: Reliability-Aware Stock Prediction via LLM-Extracted Priors and News-Driven Semantic Graphs**
+Zhou, Ma & Costa Sperb, 2026-11-03 · https://arxiv.org/abs/2611.04217 · cs.LG (CIKM 2026)
+GNN-rammeverk som gjør **pålitelighet til et førsteklasses signal**: statiske
+LLM-utledede selskapsrelasjoner aggregeres over flere kjøringer med
+konfidensvekting, slik at lav-konsistente kanter nedvektes; den dynamiske
+nyhetsgrafen temporal-aggregeres med eksponentiell decay for å håndtere
+**ujevn dekning**; en kontekstavhengig gated fusion rebalanserer de to
+grafene per aksje per dag. +16,4 % AR@5 / +22,6 % SR@5 mot sterkeste baseline
+på S&P 500, med ablationsstudie og menneskevalidering av utvalgte relasjoner.
+**Bruk (3c):** selve arkitekturen er ikke transplanterbar til vårt
+5-minutters LLM-kall, men to prinsipper er det: (a) *agreement-vekting* —
+kjør den kritiske felt-ekstraksjonen to ganger og la uenighet mellom kjøringene
+senke vekten/flagge feltet i stedet for å bruke det rått (Khaybullina viste
+51–96 % numerisk nøyaktighet; dette er den billigste måten å fange de feilene);
+(b) *ujevn dekning som eksplisitt gating* — events uten preview/option-stats
+(<50 %) skal ha en egen, navngitt gren, ikke bare mangle tekst i prompten
+(forsterker kø 6). Latens-forbehold: to ekstraksjonskall à 120 s passer i
+5-min-vinduet, men bare så vidt — kjør dem parallelt, eller bruk den billige
+modellen til den andre lesingen.
+
+(Forkastet: 2611.06989 «The Two-Ledger Model» — kostnadsregnskap for
+multi-agent-systemer, ingen kobling til avkastningsrangering; 2611.05611
+«Hybrid Spark» — spekulativ dekoding/serving-latens, påvirker ikke
+rangeringsinformasjon (og vi styrer ikke serveringen hos OpenAI); 2611.05515
+«TSFM Meets LLM» — tekst som kovariater i tidsserieprognoser, men vårt utfall
+er én dags tverrsnittsreaksjon, ikke en numerisk serie å predikere; 2611.03993
+crowdfunding-algoritmeaudit — demografi/reputasjon, feil litteratur.)
+
 ### Uke 2026-W43 (23. okt 2026)
 
 Collect OK: 8 nye arXiv-papers, 0 feilede søk (state.json verifisert: alle 8
@@ -233,6 +318,11 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    sannsynlighetretningen i promptene — gain/loss-ramming skifter
    anbefalingskategori i 32,4 % av grupper; spør alltid i samme retning
    (eller begge + deterministisk forlikning) før percentile-mapping.*
+   *Tillegg 2026-11-06 (Efe et al. 2611.01123): før en ny tekstfeature
+   adopteres, kjør tre trinn — offentlig-info-baseline, inkrementell
+   rangeringsevne mot den, og masked-identity-sjekk. Call-tekst ga
+   −0,05 til 0,11 AUROC utover offentlig info i restateringsutvalget,
+   og LLM-en navnga ticker i 66 % av maskerte transkript.*
 6. **Missing-data-grener**: eksplisitte fallback-regler når preview/opsjonsstats
    mangler (LLM-prior-advarsel fra Khetan & Balasubramanian, 8. okt).
 7. **Preview-håndtering etter arrangørens eget mønster** (plattform-funn
@@ -259,9 +349,57 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    Kortet er public ved publisering og må holdes oppdatert ved
    materielle metodeendringer (Official Rules §3). Frist: Q4-slutt
    15. des. (Plattform-funn 2026-10-23.)
-10. *(følger fra ny research hver uke)*
+10. **Identitets-ablation (3b/3c)**: vi vet ikke hvor mye av ΔR² som kommer fra
+   materials og hvor mye som kommer fra modellens minne om tickeren. Kjør
+   arkiv-events på nytt med ticker/selskapsnavn erstattet av en anonym kode
+   (preview og facts inneholder navnet — erstatt det også, eller sammenlign
+   en variant hvor modellen instrueres til å ikke bruke selskapskunnskap og
+   begrunne kun fra de leverte feltene). Faller ΔR² kraftig, er mye av poenget
+   vårt «identity prior» — som er lovlig (kun knowledge_cutoff gjelder) men
+   sårbart for reflektivitet, og som bør nedvektes der materials er rike.
+   (OLIVIA 2611.03985 + Efe 2611.01123, 6. nov.) Ingen kodelås — dette er
+   en 3b-analyse som kan kjøres mot arkivet uten å røre live-agenten.
+11. **Agreement-vektet felt-ekstraksjon (3c)**: kjør den kritiske
+   ekstraksjonen to ganger (parallelt, eller modell 2 = billig modell) og
+   nedvekt/flagg felt der kjøringene er uenige, i stedet for å bruke rå
+   enkeltlesing. Billigste motmiddel mot 51–96 % numerisk nøyaktighet i
+   felt-uttrekk (Khaybullina) og samme prinsipp som LENS' konfidensvekting.
+   Latensvakt: to kall à 120 s ligger nær 5-min-grensen — mål faktisk
+   veggklokke i live-events før dette slås på for alle events; vurder
+   kun for events med rik preview. (LENS 2611.04217, 6. nov.)
+12. **Valideringshygiene for 3b**: frys analyseplan (hvilke events, hvilke
+   features, hvilken metrikk) før en arkivkjøring, ikke etter — OLIVIA viser
+   hvor mye av «funnet» som fordamper når seleksjonen bare har lov å skje på
+   valideringsdata. Praktisk: skriv ablasjonsplanen i kanban-kommentar først,
+   kjør, rapporter uansett utfall.
 
 ## Plattform-endringer
+
+- 2026-11-06 — ukentlig web-sjekk (web_search + web_extract mot GitHub OK;
+  explainingmarkets.ai kun søkesnutter, substack-feed avvises av backend
+  med CRAWL_UNEXPECTED_CONTENT_TYPE = XML):
+  - **Blogg: ingen nye poster.** Fortsatt kun «New data for Q4 2026»
+    (29. sep) — den er nå 5 uker gammel, og vi er midt i live-vinduet
+    (12. okt–15. des). Ingen nye modell-benchmarks → **OPENAI_MODEL=
+    gpt-6-astra står**. Søkesnuttene gjengir R²-tabellen uendret
+    (Luna 0,218–0,222 uten preview / 0,245–0,288 med; Sol 0,208–0,223 /
+    0,281–0,305; Astra 0,230–0,231 / 0,309–0,312; surprise alene 0,099),
+    og formuleringen «Astra xhigh explains more than 30%» er bekreftet.
+  - **GitHub-org: uendret, 6 repos.** examples sist pushet 10. okt;
+    starter-modal, starter-railway og baseline-earnings-summary 29.–30. sep;
+    model-card-skill 21. sep; .github 6. jul. Ingen SDK-/materials-endringer
+    som berører 2c/3c denne uken.
+  - **Nye kilder oppdaget i org-README (legges til overvåkingen):**
+    nyhetsbrev på explainingmarkets.substack.com og X-konto
+    @explainingmrkts — arrangøren sier at kvartalsresultater,
+    SDK-releaser og kunngjøringer går der. Cron kan ikke lese
+    Substack-feeden (XML avvises), så ved mistanke om ny post må Kevin
+    hente fulltekst interaktivt; X er heller ikke lesbart herfra.
+  - **Verifisert detalj:** org-README lenker arbeidsartikkelen til
+    SSRN abstract_id **6474601** — samme papir som NOTES.md §1 omtaler,
+    nå med direkte ID (nyttig for fulltekstlesing av
+    metodeavsnittet/scoring-validering).
+  - Presse-/tredjepartssøk ga ingen nye tekniske detaljer utover NOTES.md.
 
 - 2026-10-23 — ukentlig web-sjekk (web_search; explainingmarkets.ai
   fortsatt kun søkesnutter i cron — GitHub fungerte via web_extract):
@@ -366,4 +504,6 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 - arXiv: earnings announcement/return, earnings calls, option-implied,
   PEAD, LLM-finans, abnormal return prediction (6 søk, 21-dagers vindu)
 - explainingmarkets.ai/blog (via ukentlig web-sjekk i agent-turnen)
+- explainingmarkets.substack.com (arrangørens nyhetsbrev — kunngjøringer og
+  kvartalsresultater; XML-feed, ikke lesbar fra cron) og X @explainingmrkts
 - github.com/explaining-markets/* (SDK/starter-endringer)
