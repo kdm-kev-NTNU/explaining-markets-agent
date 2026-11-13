@@ -6,6 +6,95 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W46 (13. nov 2026)
+
+Collect OK: 6 nye arXiv-papers, 0 feilede søk. 3 beholdt, 3 forkastet.
+Ukens viktigste treff er det første paperet vi har funnet som gir et *direkte*
+ΔR²-håndtak: heterogen og konveks surprise-følsomhet, altså en ikke-lineær
+bruk av surprise som benchmarken (lineær β₂) ikke fanger. De to andre er
+metodiske: én overførbar ICL-idé (referanseklasse i prompten) og én
+kvantitativ måling av hvor mye tekst-look-ahead blåser opp arkivtall.
+Web-sjekk: bloggen uendret (29. sep), GitHub-org uendret på 6 repos — men
+commit-historikken i `examples` ga to nye scoring-detaljer (se
+«Plattform-endringer» 2026-11-13).
+
+**Huge If True: Learning from the Size of the Surprise**
+Graeber, Roth, Sammon & Schesch, 2026-11-11 · https://arxiv.org/abs/2611.15747 · econ.GN
+Modellerer at reaksjonen på en earnings-surprise går via en ukjent multiplikator
+λ som mapper earnings-tall til verdi (r ≈ λ·s). Investorene lærer om både nyheten
+og λ fra **samme tall**: store surprises kan signalisere lav λ og små høy λ.
+Større usikkerhet om λ demper gjennomsnittsfølsomheten, men gjør den *brattere
+nær null-surprise*. Bekreftet i incentivert eksperiment (prosesseringsbegrensninger
+senker snittfølsomhet, hever den nær null) og i ekte earnings-announcements:
+aksjer med høy verdsettelsesusikkerhet (deres proxy for λ-usikkerhet) reagerer
+mindre i snitt, men brattere nær null. **Bruk (3c, ny kø 13):** benchmarken
+fatter surprise som én lineær β₂ over hele tverrsnittet. Er λ heterogen og
+fallende i verdsettelsesusikkerhet, er E[car1|s] ikke-lineær — og en ikke-lineær,
+monoton transform av surprise kan gi ΔR² > 0 selv om surprise selv ligger i
+benchmarken (ΔR² måles mot den *lineære* surprise-regressoren). Konkret: la
+prediksjonen komprimere surprise-percentilen i halene og ekspandere den nær
+midten for selskaper med høy verdsettelsesusikkerhet u, med omvendt (nærmest
+lineær) behandling for lav u. u må approksimeres fra det vi får: opsjonsstats
+(høy `implied_earnings_volatility` relativt til `implied_absolute_earnings_move`),
+og preview-felt (multipler/verdsettelsesdiskusjon, «hvor mye er priset inn»,
+analytikerspredning i konsensustabellen). Ekstraksjonssteget (kø 5) bør hente
+verdsettelsesusikkerhet som eget tallfelt, ikke som narrativ. Forbehold:
+λ-modellen er formulert på announcement-dagsavkastning = samme målvariabel som
+car1 (god match), men 546 arkiv-events er lite for en interaksjonskoeffisient —
+kjør som arkiv-ablasjon etter kø 12-formatet (frosset plan) før den rører live.
+
+**Tabular Foundation Models in Financial Predictions**
+deHaan & Huang, 2026-11-10 · https://arxiv.org/abs/2611.13550 · cs.LG, q-fin.CP, q-fin.ST
+Teknisk note som introduserer tabular foundation models (TFM) i regnskapsforskning:
+Google Research' TabFM gir numeriske prediksjoner via **in-context learning** uten
+trening eller tuning, og er mer nøyaktig enn både en finstilt open-weight-LLM fra
+nyere regnskapsforskning og flere trebaserte modeller — på oppgaven «prediker
+selskapets earnings-endring neste år». Viktig designpoeng: TFM-ene er forhåndstrent
+på **syntetiske** tabulardata og unngår dermed look-ahead-bias fra å memorere
+selskapenes utfall. **Bruk (3c, ny kø 14):** to overførbare ting. (1) Selve
+ICL-mekanikken trenger ikke en TFM: gi prediksjonskallet et lite sett historiske
+referanseeventer (features + realisert car1-percentil) og be modellen *interpolere
+i referanseklassen* i stedet for å resonnere fritt om selskapet — samme «les av
+naboene»-operasjon som tabellmodellen gjør, og den flytter rangeringsarbeidet fra
+selskapsminne til leverte data (jf. kø 10). (2) Argumentet om syntetiske
+treningsdata er et alternativ til identitetsmaskering når vi skal måle hvor mye av
+ΔR² som er memorering: en modell som aldri har sett selskapets utfall kan ikke
+lekke det. Forbehold: (a) målvariabelen er neste års earnings-endring, ikke
+car1 — designevidens, ikke metode; (b) vi har ikke TabFM i 5-min-vinduet, kun
+prinsippet; (c) referanse-rader må være vintage-begrenset (neste paper) og små
+(5–15 rader) for ikke å sprenge tegnbudsjettet i prompten.
+
+**Point-in-Time Encoders for Earnings Calls**
+Brini, 2026-11-10 · https://arxiv.org/abs/2611.14325 · cs.CL, cs.IR, q-fin.ST
+(IEEE BigData 2026-workshop; kode: github.com/Alessiobrini/point-in-time-encoders-for-earnings-calls)
+Trener «vintage»-encodere på 412 248 calls med årlige cutoffs 2010–2024, der hver
+vintage bare har lest tekst datert ≤ cutoff — kur mot look-ahead-bias i backtester.
+33,8M-parameters encodere trent på calls alene slår de generelle retrieverne de
+testet i hvert testkvartal, og vektorene **hever rangkorrelasjonen mellom neste
+dags avkastning og prognoser bygget på tidligere avkastning + selskapsstørrelse
+med ca. 50 %**. Men konklusjonen er todelt: 2024-vintagen prognoserer
+earnings-surprises bedre (intervallet inkluderer null på calls ingen vintage leste),
+og **avkastning «no better» — point-in-time vintages betyr mest for retrieval og
+lite for avkastningsprognoser**. **Bruk (3b, forsterker kø 12):** (i) dette er den
+første kvantitative målingen vi har av hvor mye tekst-look-ahead blåser opp en
+arkiv-backtest, og den sier at oppblåsningen er stor for retrieval-/
+surprise-prognoser men liten for avkastning. For vår 3b: ΔR² fra arkivkjøringer
+er ikke systematisk oppblåst av at gpt-6-astra leste tekst etter cutoff — men
+*alle tekstforbedringer vi måler i arkivet* skal leses som retrieval-gevinst, ikke
+som avkastningsgevinst. (ii) Det setter et tak på hva bedre tekst-encoding/
+retrieval kan gi oss: tekst hjelper mest der benchmarken allerede står (surprise) —
+samme advarsel som Efe/OLIVIA, nå med tall. (iii) Praktisk hygiene hvis vi en gang
+bruker embeddings/retrieval i 3c: indeksen må være vintage-begrenset til
+`knowledge_cutoff`, ellers måler vi i arkivet noe vi ikke kan gjenta live.
+
+(Forkastet: 2611.17072 «Reasoning Supervision and Capability Retention in LoRA
+Domain Adaptation» — LoRA-SFT på finansdata; vi finjusterer ikke, og
+«behold generalisering under SFT» har ingen prompt-tids motstykke vi kan
+handtere. 2611.14421 «Earlybird» — streaming-ASR med 29M parametere; call facts
+kommer levert som tekst, vi har ingen ASR-pipeline. 2611.09232 «RAG-Enhanced LLMs
+for Interactive Explainability in Clinical Decision Support» — klinisk
+XAI/grensesnitt, ingen vei til avkastningsrangering.)
+
 ### Uke 2026-W45 (6. nov 2026)
 
 Collect OK: 7 nye arXiv-papers, 0 feilede søk. 3 beholdt, 4 forkastet.
@@ -272,6 +361,13 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 
 ## Implementeringskø (prioritert idébank)
 
+> **Status 2026-11-13 — anbefalt rekkefølge for live-vinduet (til 15. des):**
+> 1 (blokkerende, parser) → 9 (model card, hard frist) → **13 (surprise-konveksitet,
+> ukens nye — høyest forventet ΔR² per innsats)** → 2/3 (opsjon + scenario) →
+> 10/12 (3b-ablasjoner, ingen live-risiko) → 14 (referanseklasse i prompten).
+> Kø 4–8, 11 er prompt-hygiene som allerede er delvis implementert; ikke rør
+> SYSTEM_PROMPT mer enn én endring av gangen nå som vi er midt i scoring.
+
 1. **Parser-robusthet i 2c (blokkerende)**: `item.content` må akseptere vilkårlig
    JSON-type — option-implied-stats er et objekt, og examples-repoet hadde selv
    en schema-bug der en `str | list[str]`-annotasjon avviste HELE bundlen ved
@@ -372,8 +468,63 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    hvor mye av «funnet» som fordamper når seleksjonen bare har lov å skje på
    valideringsdata. Praktisk: skriv ablasjonsplanen i kanban-kommentar først,
    kjør, rapporter uansett utfall.
+   *Tillegg 2026-11-13 (Brini 2611.14325): vintage-encodere på 412 248 calls gir
+   den første tallfestede kalibreringen av hvor mye tekst-look-ahead betyr —
+   stor gevinst for retrieval og surprise-prognoser, «no better» for
+   avkastningsprognoser. To konsekvenser: (a) ΔR² fra arkivkjøringer er ikke
+   systematisk oppblåst, men enhver tekstforbedring målt i arkivet er en
+   retrieval-gevinst til vi har vist noe annet; (b) bruker vi embeddings/
+   retrieval i 3c, må indeksen være vintage-begrenset til `knowledge_cutoff`.*
+13. **Surprise-konveksitet betinget på verdsettelsesusikkerhet (3c — høyest
+   forventet ΔR² per innsats)**: benchmarken bruker surprise som én lineær β₂.
+   Graeber et al. viser at reaksjonen går via en heterogen multiplikator λ
+   (earnings → verdi) som er fallende i verdsettelsesusikkerhet: høy-usikkerhet
+   reagerer mindre i snitt men brattere nær null. Implementer som en monoton,
+   ikke-lineær transform *oppå* surprise-percentilen: komprimer halene og
+   ekspander midten for høy-u-selskaper, nærmest lineært for lav-u. u hentes fra
+   opsjonsstats (implied vol vs. implied abs move) og preview-felt (multipler,
+   «priset inn», analytikerspredning) via kø 5-ekstraksjonen. Dette er lovlig
+   ΔR² fordi residualen ligger i *formen* på surprise-relasjonen, ikke i
+   surprise-nivået. Rekkefølge: (1) frosset arkiv-ablasjon etter kø 12-formatet,
+   (2) bare hvis positiv: prompt-instruks i 3c. (Graeber/Roth/Sammon/Schesch
+   2611.15747, 13. nov.)
+14. **Referanseklasse i prompten (3c, ICL-prinsippet)**: gi prediksjonskallet
+   5–15 historiske referanseeventer (surprise-pct, opsjonsstats, nøkkel-facts,
+   realisert car1-pct) og instruer modellen til å *interpolere i referanseklassen*
+   framfor å resonnere fritt om selskapet — samme operasjon en tabellmodell gjør
+   med kontekst-rader. Flytter rangeringsarbeidet fra selskapsminne til leverte
+   data (jf. kø 10) og gir samtidig en naturlig plassering i kvartalets fordeling.
+   Krav: radene må være pre-cutoff (vintage-hygiene, kø 12), lite tegnbudsjett,
+   og valg av referanse må være deterministisk (samme regel hver gang) — ellers
+   blir det støy. (deHaan & Huang 2611.13550, 13. nov.)
 
 ## Plattform-endringer
+
+- 2026-11-13 — ukentlig web-sjekk (web_search mot blogg/leaderboard; web_extract
+  OK mot github.com, fortsatt kun søkesnutter mot explainingmarkets.ai):
+  - **Blogg: ingen nye poster.** Fortsatt «New data for Q4 2026» (29. sep) —
+    nå 6,5 uker gammel, midt i live-vinduet (12. okt–15. des). Søkesnuttene
+    gjengir R²-tabellen uendret (surprise ~10 %; facts 21–23 %; «every model
+    does clearly better» med preview; Astra xhigh >30 %; Luna 24 % medium →
+    29 % max for under \$3/1000). **Ingen nye modell-benchmarks →
+    OPENAI_MODEL=gpt-6-astra står.**
+  - **GitHub-org: uendret, 6 repos** (starter-modal, examples,
+    starter-railway, baseline-earnings-summary, .github, model-card-skill).
+    examples sist pushet 10. okt (PR #7 `options-market-data`: notebook for
+    opsjonsmarkedsdata + implied-move-rescaling-helper); starter-modal og
+    starter-railway 30. sep; model-card-skill 21. sep. Ingen SDK-/materials-
+    endringer som berører 2c/3c.
+  - **Nye scoring-detaljer fra `examples`-commit-historikken (bradfordlynch,
+    aug 2026 — ikke tidligere logget):** 4. aug «Gate scoring credit on the sign
+    of the prediction coefficient», 5. aug «Drop the sign gate and floor a
+    no-spread prediction regressor». Gjeldende offentlige scorer har altså
+    **ingen fortegns-gate** — kreditten er ren ΔR² — og en prediksjon uten
+    spredning er eksplisitt *flooret*, ikke bare implisitt null. Bekrefter
+    NOTES §3.1–§3.2: kun monotone rangeringsforskjeller teller, fortegn/skala
+    er likegyldig. Praktisk konsekvens for kø 13: en monoton transform av
+    surprise-percentilen kan implementeres uten orienteringshensyn.
+  - Leaderboard/hjemmeside: uendret struktur (2026Q4, own/common sample);
+    «Q4 scoring runs October 12 through December 15» bekreftet på nytt.
 
 - 2026-11-06 — ukentlig web-sjekk (web_search + web_extract mot GitHub OK;
   explainingmarkets.ai kun søkesnutter, substack-feed avvises av backend
