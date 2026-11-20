@@ -6,6 +6,138 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W47 (20. nov 2026)
+
+Collect OK: 7 nye arXiv-papers, 0 feilede søk. 4 beholdt, 3 forkastet.
+Ingen av ukens papers gir en ny *signalkilde* — alle fire er metodiske, og to av
+dem er rene negative resultater om LLM-handelsagenter. Men de treffer det
+svakeste punktet i systemet vårt: vi vet fortsatt ikke hvor mye av ΔR² som
+kommer fra materials og hvor mye som kommer fra modellens minne om tickeren
+(kø 10), og vi har ingen tallfestet håndtering av støy i egen prediksjon.
+Ukens viktigste tall: en LLM som bare får ticker + dato treffer *retningen* på
+59,2 % av 598 earnings-announcements før treningskuttet og 53,3 % etter —
+identitets-prioren er reell, men beskjeden, og den forsvinner nesten helt
+utenfor treningsvinduet. Ukens viktigste design-idé: ablationsarmen «kun
+ticker + dato» er en bedre identitetstest enn navnemaskering (som OLIVIA viste
+at modellene gjennomskuer i 62–74 % av tilfellene).
+
+**The Only Edge Was Memorized in Training: LLM Trading Agents Around Earnings and Bad News**
+Jackson Wang, 2026-11-17 · https://arxiv.org/abs/2611.22177 · cs.AI, cs.MA
+Tester LLM-handelsagenter på de to eneste stedene penger kan ligge igjen når
+nyheter ellers prises inn i løpet av minutter: *før* planlagte earnings (datoen
+er kjent på forhånd) og *etter* store fall (hvis markedet falt for langt).
+Look-ahead-fri benchmark over 598 earnings-announcements og 409 bad-news-fall i
+store US-aksjer, der all input kuttes ved beslutningsstengningen, hver beslutning
+kjøres både med og uten aksjenavn, og staged agenter sammenlignes med enkeltkall,
+enkle regler og en logistisk regresjon. Over fem modeller fra fire leverandører
+slo ingen agent de enkle veddemålene: før earnings kjøpte de stort sett og tjente
+nøyaktig det samme som å kjøpe før hver announcement, og etter dårlige nyheter
+kalte en Gemini-agent nesten hvert fall for en overreaksjon uten å plukke bedre
+dip enn å kjøpe alle. De eneste gevinstene kom fra det modellene hadde memorert:
+gitt **bare ticker og datoer** kalte en GPT-modell retningen på 59,2 % av
+announcementene før treningskuttet og 53,3 % etter. **Bruk (kø 10 — dette
+erstatter navnemaskering som design):** kjør arkivprediksjonene våre i en tredje
+arm der modellen får *kun* ticker, kvartal og event-dato — ingen facts, ingen
+preview, ingen opsjonsstats. ΔR² fra den armen er den rene identitets-prioren,
+målt uten maskeringsartefakter og uten at vi trenger å gjette hva «anonymisert»
+betyr. Er ticker-only-ΔR² en stor andel av full-materials-ΔR², er mesteparten av
+poenget vårt minne, ikke analyse: lovlig (kun `knowledge_cutoff` gjelder), men
+sårbart for reflektivitet og bør nedvektes der materials er rike. **Viktig
+avgrensning:** deres målvariabel er porteføljeavkastning, og «no alpha, only
+beta»-funnet overføres *ikke* til oss — vårt y er kvartalsvis persentilrangert og
+dermed tverrsnitts-demeanet, så en felles drift (kjøpe før alle announcements)
+gir ΔR² = 0 per konstruksjon. Det er identitets-tallene (59,2 / 53,3) som gjelder
+for oss, ikke avkastningskonklusjonen. Åpent: vi vet ikke gpt-6-astras
+treningskutt, og Q3-2026-arkivet ligger nær det — er arkivet post-cutoff for
+Astra, er hele kø 10-risikoen liten. Sjekk dette før ablasjonen tolkes.
+
+**LLM Trading Agents Earn Beta, Not Alpha: A Look-Ahead-Free Benchmark**
+Jackson Wang, 2026-11-14 · https://arxiv.org/abs/2611.19530 · cs.AI, cs.MA
+(kode/benchmark: github.com/jackson-cmd/risk-aware-trading-agents)
+Introduserer `rta-bench-1`: backtest over tre US-markeder (rally, bjørn, krasj)
+der hver overskrift først vises i publiseringsminuttet, hver periode spilles både
+blindt og navngitt, hver kjøring sjekkes for look-ahead, og hver avkastning
+dekomponeres i faktor-eksponering og alfa og scores mot tilfeldige valg i samme
+dag/sektor. I 91 kjøringer av seks modeller fra fire leverandører var **ingen alfa
+signifikant**, markeds-/stil-eksponering forklarte median 78 % av avkastningen,
+og beslutningene var ikke bedre enn tilfeldige aksjer i samme sektor — i
+ablasjoner tjente agentene like mye *uten* overskriftene sine. To funn er
+direkte overførbare. (a) **Støyen er stor nok til å dominere:** to kjøringer av
+samme modell som bare skilte i seed endte 5,2 prosentpoeng fra hverandre i snitt,
+så ferdighet kan ikke skilles fra flaks uten mange kjøringer. Vår regressor er
+`predicted_percentile`; støy i den attenuatorer β₁ og senker ΔR²
+(errors-in-variables), så to parallelle kall med ulik seed som gjennomsnittes er
+gratis variansreduksjon innenfor 5-min-vinduet (parallelt = ingen latensøkning,
+~2x kostnad, uvesentlig ved vårt volum) — ny kø 15. (b) **Prompt-instrukser
+biter:** én kontantregel i prompten kuttet en GPT-agents aksjeandel med 30,3
+prosentpoeng i alle seks par — instruksjonsfølgingen er pålitelig, altså er
+kø 3–8/13s prompt-nivå-endringer ikke placebo. Forbehold: 5,2 pp er
+*avkastnings*spredning, ikke persentilspredning — mål vår egen spredning før
+tallet brukes til noe.
+
+**NoLBERT-Calls: Reading Earnings Calls Without Hindsight**
+Foley, Hartadi, Prakash, Suwanphibun & Vatsal, 2026-11-15 · https://arxiv.org/abs/2611.19849 · cs.CL, cs.IR, cs.LG, q-fin.GN
+Adapterer NoLBERT — en encoder forhåndstrent *kun* på tekst publisert 1976–1995 —
+til earnings calls uten å la den lese noe datert etter 31.12.2023, med calls
+selv som treningssignal (hvert analyst-spørsmål etterfølges av ledelsens svar, og
+modellen lærer å plukke riktig svar blant samme calls øvrige svar). Testes på
+alle US-calls jan 2025–okt 2026 (20 323 calls, 254 575 spørsmål), med alle
+modellvalg tatt på 2024-calls: den tilpassede modellen rangerer riktig svar
+først i 78,0 % av spørsmålene (95 %-intervall 77,8–78,2; sjanse 8,0 %) mot 26,3 %
+før tilpasning, og ligger 3,4 pp foran call-adaptert FinBERT. Det viktigste
+funnet for oss er likevel år-for-år-testen 2013–2026: **ingen look-ahead-premie**
+— modellen er ikke bedre på årene den ble trent på enn på år den aldri har sett.
+Prisen for kuttet er compute (13 GPU-timer staged tilpasning mot en felles
+150-minutters oppskrift, der NoLBERT tilpasser seg dårligst av fire encodere).
+**Bruk (forsterker kø 12 — andre uavhengige tallfesting etter Brini 2611.14325):**
+to vintage-begrensede tekstarbeider finner nå samme sak: kuttet koster ytelse,
+men det kjøper *rent* mål — hindsight sitter i features, ikke i testperioden, og
+en ærlig encoder gir ingen premie på treningsårene. For vår 3b betyr det at
+arkivkjøringer ikke er systematisk oppblåst, men også at tekstforbedringer målt i
+arkivet skal leses som retrieval-gevinst til vi har vist noe annet. Forbehold:
+(a) målvariabelen er svarutvelgelse, ikke car1 — designevidens; (b)
+QA-paret er et *treningssignal* vi ikke kan bruke i et 5-minuttersvindu (vi
+finjusterer ikke); (c) 3,4 pp over FinBERT er på retrieval, ikke på rangering av
+avkastning — ingen grunn til å bytte tekstkilde i 3c.
+
+**Short Windows, Unmodelled Costs, Unknown Cutoffs: A Pre-Registered Evidence Audit of 91 LLM Trading Papers**
+Henry Zhang, 2026-11-13 · https://arxiv.org/abs/2611.18934 · q-fin.CP, q-fin.GN, q-fin.TR
+(kode: github.com/henryzhangpku/llm-trading-evidence-audit; også SSRN 7687481)
+Pre-registrert revisjon av evidensen bak 91 LLM-handelspapers Sharpe-tall: population,
+ti-felts koderubrikk, analysescript og fem retningshypoteser ble committet *før*
+koding, hver kode er bundet til et verbatim-sitat som et script sjekker mot
+papirteksten, og en blind andrekoder rekodet 20 %. Funn: 51 % trekker ingen
+handelskostnader og bare 9 % modellerer dem fra data; median testvindu er 12
+måneder og en fjerdedel er ≤ 6 måneder; blant de 51 papers der vinduet *ikke* er
+kjent å ligge etter modellens kutt, tester 98 % verken etter kuttet, live, eller
+med kronologisk konsistent modell; bare 9 % rapporterer multiplicitetsjustert
+resultat, og kun fem papers kombinerer kostnader, lekkasjekontroll og rapportert
+trial-antall. To av fem hypoteser holder (korte vinduer; ukontrollert look-ahead);
+tre faller — bl.a. er de fleste «trial counts» gjentatte seeds, ikke antall
+strategier søkt. **Bruk (utvider kø 12 — dette er base-raten for hvorfor vi må
+telle våre egne forsøk):** (i) *tell trials*: hver prompt-variant vi prøver på
+546-events-arkivet er et trial. Med SE ≈ 0,034–0,036 på ΔR² (arrangørens egen
+leaderboard-regresjon) er en enkeltvariant som «vinner» med under ca. 0,03 ikke
+bevis — bruk derfor *paret* design (samme events, begge varianter, paret
+bootstrap på ΔΔR²) der variansen på differansen er langt mindre enn 2·SE, og
+rapporter antall varianter forsøkt uansett utfall. (ii) Skriv cut-off-antagelsen
+eksplisitt: vi vet ikke gpt-6-astras kutt, og 98 %-funnet over er nøyaktig vårt
+hull. (iii) Kostnadshalen av kritikken rammer oss ikke — vi har ingen
+handelskostnader; det er lekkasje- og multiplicitetsdelen som gjelder.
+Forbehold: 6 siders teknisk note, få tall per hypotese, og «headline Sharpe» er
+ikke vår metrikk.
+
+(Forkastet: 2611.25951 «Measuring climate credibility?» — Earnings-to-Talk-index
+fra call-språk kobles til gjeldssammensetning og RepRisk-hendelser; utfallet er
+kapitalstruktur, ikke car1, og indeksen er en klimanarrativ-måling uten vei til
+tverrsnittsrangering. 2611.19292 «Zero-Shot Weight-Space Programming» —
+håndkonstruerte feed-forward-nett uten gradientdescent for tabulære datasett;
+interessant kompilasjonsidé, men ingen kobling til tekst+stats → persentil, og
+ingen av demonstrasjonene er finans. 2611.18130 JFinBench — japansk
+finanssertifiserings-benchmark som kontinuerlig refreshes mot eksamenslekkasje;
+måler modellkunnskap om japansk finansregulering, ikke rangeringsinformasjon om
+avkastning.)
+
 ### Uke 2026-W46 (13. nov 2026)
 
 Collect OK: 6 nye arXiv-papers, 0 feilede søk. 3 beholdt, 3 forkastet.
@@ -361,12 +493,15 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 
 ## Implementeringskø (prioritert idébank)
 
-> **Status 2026-11-13 — anbefalt rekkefølge for live-vinduet (til 15. des):**
+> **Status 2026-11-20 — anbefalt rekkefølge for live-vinduet (til 15. des):**
 > 1 (blokkerende, parser) → 9 (model card, hard frist) → **13 (surprise-konveksitet,
-> ukens nye — høyest forventet ΔR² per innsats)** → 2/3 (opsjon + scenario) →
-> 10/12 (3b-ablasjoner, ingen live-risiko) → 14 (referanseklasse i prompten).
+> høyest forventet ΔR² per innsats)** → 2/3 (opsjon + scenario) → **15 (multi-run +
+> spredningsvakt, billig og risikofri beskyttelse av alt annet)** → 10/12
+> (3b-ablasjoner, ingen live-risiko) → 14 (referanseklasse i prompten).
 > Kø 4–8, 11 er prompt-hygiene som allerede er delvis implementert; ikke rør
 > SYSTEM_PROMPT mer enn én endring av gangen nå som vi er midt i scoring.
+> Merk fra W47: bredden i egne prediksjoner er en forutsetning for all ΔR² —
+> sjekk kø 15-vakten før flere prompt-eksperimenter, ellers måler vi støy.
 
 1. **Parser-robusthet i 2c (blokkerende)**: `item.content` må akseptere vilkårlig
    JSON-type — option-implied-stats er et objekt, og examples-repoet hadde selv
@@ -455,6 +590,19 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    sårbart for reflektivitet, og som bør nedvektes der materials er rike.
    (OLIVIA 2611.03985 + Efe 2611.01123, 6. nov.) Ingen kodelås — dette er
    en 3b-analyse som kan kjøres mot arkivet uten å røre live-agenten.
+   *Tillegg 2026-11-20 (Wang 2611.22177):* **bytt design fra maskering til en
+   tredje ablasjonsarm.** Maskering er upålitelig (OLIVIA: modellene
+   identifiserer maskerte selskaper i 62–74 % mot 28 % baseline; Efe: 66 %
+   navngitt ticker), så den måler sin egen lekkasje. Kjør i stedet tre armer på
+   samme arkiv-events: (A) full materials, (B) kun ticker + kvartal + event-dato
+   (ingen facts/preview/stats), (C) materials med eksplisitt instruks om å
+   begrunne kun fra leverte felt. ΔR²(A) − ΔR²(B) er den ærlige
+   materials-gevinsten, og ΔR²(B) er identitets-prioren direkte. Wangs tall for
+   armenes referanseverdi: ticker+dato alene traff retningen på 59,2 % før
+   treningskuttet og 53,3 % etter — så forvent *liten* ΔR²(B) hvis arkivet
+   ligger etter Astra-kuttet. **Blokkering:** avklar gpt-6-astras treningskutt
+   (og om Q3-2026-arkivet ligger etter det) *før* armen tolkes; ellers vet vi
+   ikke om B er pre- eller post-cutoff.
 11. **Agreement-vektet felt-ekstraksjon (3c)**: kjør den kritiske
    ekstraksjonen to ganger (parallelt, eller modell 2 = billig modell) og
    nedvekt/flagg felt der kjøringene er uenige, i stedet for å bruke rå
@@ -473,8 +621,23 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    stor gevinst for retrieval og surprise-prognoser, «no better» for
    avkastningsprognoser. To konsekvenser: (a) ΔR² fra arkivkjøringer er ikke
    systematisk oppblåst, men enhver tekstforbedring målt i arkivet er en
-   retrieval-gevinst til vi har vist noe annet; (b) bruker vi embeddings/
-   retrieval i 3c, må indeksen være vintage-begrenset til `knowledge_cutoff`.*
+   retrieval-gevinst til vi har vist noe annet; (b) bruker vi embeddings/retrieval i 3c, må indeksen være vintage-begrenset til `knowledge_cutoff`.*
+   *Tillegg 2026-11-20 (Zhang 2611.18934 + Foley et al. 2611.19849):* **tell
+   trials, og bruk paret design.** Revisjonen av 91 LLM-handelspapers fant at
+   bare 9 % rapporterer multiplicitetsjustert resultat og at de fleste oppgitte
+   «trial counts» er gjentatte seeds, ikke antall strategier søkt — og at 98 %
+   av papers hvis testvindu ikke er kjent post-cutoff mangler enhver
+   kronologisk kontroll. Vi har samme struktur: ett 546-events-arkiv, mange
+   prompt-varianter, SE ≈ 0,034. Praktisk regel: (1) hver variant = ett trial,
+   tell og rapporter antallet uansett utfall; (2) mål A/B på *samme* events og
+   rapporter paret ΔΔR² med paret bootstrap — variansen på differansen er langt
+   mindre enn 2·SE, så en reell effekt på 0,01–0,02 er påvisbar der en
+   uavhengig sammenlikning ikke er det; (3) skriv cutoff-antagelsen for
+   Astra/arkivet eksplisitt i hver 3b-rapport. Foley et al. legger til den
+   motsatte halen: en vintage-begrenset encoder viser *ingen* premie på
+   treningsårene (2013–2026), så arkivet er et brukbart måleinstrument —
+   problemet er multiplicitet og cutoff-dokumentasjon, ikke systematisk
+   oppblåsing.
 13. **Surprise-konveksitet betinget på verdsettelsesusikkerhet (3c — høyest
    forventet ΔR² per innsats)**: benchmarken bruker surprise som én lineær β₂.
    Graeber et al. viser at reaksjonen går via en heterogen multiplikator λ
@@ -498,7 +661,51 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    og valg av referanse må være deterministisk (samme regel hver gang) — ellers
    blir det støy. (deHaan & Huang 2611.13550, 13. nov.)
 
+15. **Prediksjonsstøy: multi-run-gjennomsnitt + spredningsvakt (3c/F4 — billig,
+   risikofri gevinst)**: Wang 2611.19530 viser at to kjøringer av samme modell
+   som bare skilte i seed endte 5,2 prosentpoeng fra hverandre i snitt over 91
+   kjøringer — støy på beslutningsnivå er stor nok til å dominere «ferdighet».
+   Hos oss sitter støyen i regressoren: `predicted_percentile` med additiv støy
+   attenuatorer β₁ og senker ΔR² (errors-in-variables), så (a) kjør to kall per
+   event med ulik seed **parallelt** og bruk gjennomsnittet — ingen
+   latensøkning i 5-min-vinduet, ~2x kostnad som er uvesentlig ved vårt volum;
+   vær obs på at preview+facts må formateres én gang og gjenbrukes, ellers
+   kaster vi bort tid på dobbel parsing. (b) **Vakten er viktigere enn
+   gjennomsnittet:** logg tverrsnitts-spredningen av `predicted_percentile` per
+   kvartal (sd, andel i [0,3;0,7], andel utenfor [0,1;0,9]). Kollapser
+   spredningen, kollapser ΔR² uansett hvor gode enkeltvurderingene er — og
+   gjeldende scorer *floorer* en regressor uten spredning (examples-commit
+   501bd31, 5. aug), så det er ikke en teoretisk risiko. Kalibrer terskelen fra
+   Q3-arkivprediksjonene våre (mål faktisk sd først, ikke gjett), og varsle når
+   rullende 10-events-vindu faller klart under. Forbehold: 5,2 pp er
+   avkastningsspredning, ikke persentilspredning — overfør ikke tallet, mål vårt
+   eget. Rekkefølge: (b) først (passiv logging, null live-risiko), deretter (a)
+   hvis spredningen viser seg ustabil. (Wang 2611.19530, 20. nov.)
+
 ## Plattform-endringer
+
+- 2026-11-20 — ukentlig web-sjekk (web_search mot blogg/leaderboard; web_extract
+  OK mot arxiv.org og github.com/orgs, fortsatt bare søkesnutter mot
+  explainingmarkets.ai):
+  - **Blogg: ingen nye poster.** Fortsatt «New data for Q4 2026» (29. sep) —
+    nå 7,5 uke gammel, midt i live-vinduet (12. okt–15. des, som er ~4 uker fra
+    å stenge). Søkesnuttene gjengir R²-tabellen uendret (surprise ~10 %;
+    facts 21–23 %; «every model does clearly better» med preview; Astra xhigh
+    >30 %; Luna 24 % medium → 29 % max). **Ingen nye modell-benchmarks →
+    OPENAI_MODEL=gpt-6-astra står.**
+  - **GitHub-org: uendret, 6 repos, ingen nye commits.** `examples` sist pushet
+    10. okt (PR #7 options-market-data), `starter-modal` 30. sep,
+    `starter-railway`/`baseline-earnings-summary` 30. sep, `model-card-skill`
+    21. sep. Commit-historikken i `examples` er identisk med forrige ukes
+    lesning (topp: 450204f 10. okt). Ingen SDK-/materials-endringer som berører
+    2c/3c.
+  - Tredjepart (quantide.cn, uendret artikkel): bekrefter på nytt at preview- og
+    opsjonsstats-feltene er **valgfrie** og må ha graceful fallback, og at
+    <50 % av Q3-events hadde opsjonsstats. Deres formulering «still 70 % of the
+    variance unexplained» er utledet fra arrangørens 30 %-tallet, ikke et nytt
+    måltall — ikke legg vekt på den.
+  - **Ingen platform-endring å handle på denne uken.** Eneste tidskritiske
+    gjenstående: kø 9 (model card, frist 15. des) — under 4 uker igjen.
 
 - 2026-11-13 — ukentlig web-sjekk (web_search mot blogg/leaderboard; web_extract
   OK mot github.com, fortsatt kun søkesnutter mot explainingmarkets.ai):
