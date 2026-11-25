@@ -7,6 +7,8 @@ disclosure fetch so the test is fully offline.
 
 from __future__ import annotations
 
+import pytest
+
 import predict as predict_module
 
 
@@ -375,3 +377,73 @@ def test_ask_llm_sends_luna_max_without_temperature(monkeypatch) -> None:
     assert sent["reasoning_effort"] == "max"
     assert sent["max_completion_tokens"] == predict_module.LLM_MAX_TOKENS
     assert "temperature" not in sent
+
+
+def test_truncated_output_is_logged(monkeypatch, capsys) -> None:
+    """Queue 8: finish_reason=length is visible in the logs."""
+    class _Truncated:
+        def create(self, **_):
+            class _Choice:
+                finish_reason = "length"
+
+                class message:
+                    content = '{"predicted_percentile": 0.5'
+
+            class _Response:
+                choices = [_Choice()]
+
+            return _Response()
+
+    client = _CapturingClient()
+    client.completions = _Truncated()
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(predict_module, "_client", client)
+    predict_module._ask_llm(ticker="AAPL", event_type="EARNINGS_RELEASE", materials="f", option_signal="s")
+    assert "truncated for AAPL" in capsys.readouterr().out
+
+
+def test_samples_are_averaged_and_disagreement_halves_the_tilt() -> None:
+    """Queue 15a and 11: mean of samples; wide spread pulls toward 0.5."""
+    assert predict_module.combine_samples([]) is None
+    assert predict_module.combine_samples([0.7]) == 0.7
+    assert predict_module.combine_samples([0.6, 0.7]) == pytest.approx(0.65)
+    assert predict_module.combine_samples([0.4, 0.9]) == pytest.approx(0.575)
+    a, b = predict_module.combine_samples([0.8, 0.85]), predict_module.combine_samples([0.5, 0.95])
+    assert a > b > 0.5
+
+
+def test_predict_one_runs_parallel_samples_and_drops_failures(monkeypatch) -> None:
+    monkeypatch.setenv("PREDICTION_SAMPLES", "3")
+    answers = iter([0.6, None, RuntimeError("boom")])
+    calls = []
+
+    def fake_ask(**kwargs):
+        calls.append(kwargs["ticker"])
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(predict_module, "_ask_llm", fake_ask)
+    p = predict_module._predict_one(
+        ticker="AAPL", event_type="EARNINGS_RELEASE", materials="m", option_signal="s"
+    )
+    assert calls == ["AAPL"] * 3
+    assert p == 0.6
+
+
+def test_all_samples_failing_falls_back_to_option_stats(monkeypatch) -> None:
+    monkeypatch.setattr(predict_module, "_ask_llm", lambda **_: None)
+    p = predict_module._predict_one(
+        ticker="AAPL", event_type="EARNINGS_RELEASE", materials="m", option_signal="s",
+        bundle=_bundle(STATS_ITEM),
+    )
+    assert p == pytest.approx(0.5 + 0.0412 * 1.5)
+
+
+@pytest.mark.parametrize("raw,expected", [("", 2), ("1", 1), ("5", 5), ("0", 2), ("9", 2), ("x", 2)])
+def test_prediction_samples_is_bounded(monkeypatch, raw, expected) -> None:
+    from explaining_markets.config import prediction_samples
+
+    monkeypatch.setenv("PREDICTION_SAMPLES", raw)
+    assert prediction_samples() == expected

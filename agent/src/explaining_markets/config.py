@@ -15,6 +15,8 @@ Optional:
   OPENAI_REASONING_EFFORT
                      when set (e.g. xhigh), sent as reasoning_effort on the
                      GPT-6 request. Unset means the parameter is omitted.
+  PREDICTION_SAMPLES independent LLM calls per asset, run in parallel and
+                     averaged (default 2, range 1..5; invalid values use 2)
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ from dataclasses import dataclass
 
 DEFAULT_API_BASE_URL = "https://api.explainingmarkets.ai/v1"
 DEFAULT_OPENAI_MODEL = "gpt-5.4-nano"
+DEFAULT_PREDICTION_SAMPLES = 2
+MAX_PREDICTION_SAMPLES = 5
 
 
 @dataclass(frozen=True)
@@ -60,3 +64,13 @@ def openai_reasoning_effort() -> str | None:
     """Reasoning effort for GPT-6 calls. None omits the parameter."""
     value = os.environ.get("OPENAI_REASONING_EFFORT", "").strip()
     return value or None
+
+
+def prediction_samples() -> int:
+    """LLM samples per asset. Out-of-range or non-integer values use the default."""
+    raw = os.environ.get("PREDICTION_SAMPLES", "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_PREDICTION_SAMPLES
+    return value if 1 <= value <= MAX_PREDICTION_SAMPLES else DEFAULT_PREDICTION_SAMPLES

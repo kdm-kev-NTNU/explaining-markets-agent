@@ -7,9 +7,10 @@ Scoring (see ../APPROACH.md and ../CONCEPTS.md):
 Per focal asset:
   1. Fetch the materials bundle from information_url (facts, preview, option stats).
   2. Deterministic option signal (skew + vol) as prompt context and fallback.
-  3. One LLM call via an OpenAI-compatible endpoint
-     (OPENAI_BASE_URL + OPENAI_API_KEY), returning
-     JSON {"predicted_percentile": x, "reason": "..."}.
+  3. PREDICTION_SAMPLES parallel LLM calls via an OpenAI-compatible endpoint
+     (OPENAI_BASE_URL + OPENAI_API_KEY), each returning
+     JSON {"predicted_percentile": x, "reason": "..."}; averaged, with the
+     tilt halved when the samples disagree.
   4. On LLM failure: option signal alone; then 0.5 (delivery beats imputation;
      constant baselines earn nothing — last resort).
 
@@ -21,11 +22,12 @@ from __future__ import annotations
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from openai import BadRequestError, OpenAI
 
-from explaining_markets.config import openai_model, openai_reasoning_effort
+from explaining_markets.config import openai_model, openai_reasoning_effort, prediction_samples
 
 _client: OpenAI | None = None  # lazy: importing this file must not require a key
 
@@ -550,9 +552,15 @@ def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str
     if resp is None:
         raise last_exc  # every parameter form rejected — never seen, but don't loop
     try:
-        content = (resp.choices[0].message.content or "").strip()
+        choice = resp.choices[0]
+        content = (choice.message.content or "").strip()
     except Exception:
         return None
+    if getattr(choice, "finish_reason", None) == "length":
+        print(
+            f"[WARN] LLM output truncated for {ticker} at LLM_MAX_TOKENS={LLM_MAX_TOKENS} "
+            f"(model={openai_model()})"
+        )
     m = re.search(r"\{[^{}]*\}", content, re.DOTALL)
     if not m:
         return None
@@ -580,16 +588,55 @@ def _option_fallback(bundle: dict) -> float | None:
     return 0.5 - capped * 1.5  # negative skew → below 0.5; positive → above
 
 
+DISAGREEMENT_SPREAD = 0.30  # max-min across samples above this halves the tilt
+
+
+def combine_samples(samples: list[float]) -> float | None:
+    """Mean of the samples, pulled halfway to 0.5 when they disagree widely.
+
+    Disagreeing samples are a low-confidence read; halving the tilt keeps
+    the rank order of confident events above them without discarding the
+    direction.
+    """
+    if not samples:
+        return None
+    mean = sum(samples) / len(samples)
+    if max(samples) - min(samples) > DISAGREEMENT_SPREAD:
+        return 0.5 + (mean - 0.5) / 2
+    return mean
+
+
+def _sample_llm(*, ticker: str, event_type: str, materials: str, option_signal: str) -> float | None:
+    """`prediction_samples()` parallel `_ask_llm` calls; failed samples are dropped."""
+    n = prediction_samples()
+
+    def one(_: int) -> float | None:
+        try:
+            return _ask_llm(
+                ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal
+            )
+        except Exception as exc:
+            print(f"[WARN] LLM call failed for {ticker}: {exc}")
+            return None
+
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        samples = [p for p in pool.map(one, range(n)) if p is not None]
+    p = combine_samples(samples)
+    if n > 1 and samples:
+        print(
+            f"[INFO] LLM samples for {ticker}: "
+            + ", ".join(f"{s:.3f}" for s in samples)
+            + f" → {p:.3f}"
+        )
+    return p
+
+
 def _predict_one(*, ticker: str, event_type: str, materials: str, option_signal: str,
                  bundle: dict | None = None) -> float:
     if event_type == "TEST":
         return 0.5  # portal test deliveries: neutral, never scored
 
-    p = None
-    try:
-        p = _ask_llm(ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal)
-    except Exception as exc:
-        print(f"[WARN] LLM call failed for {ticker}: {exc}")
+    p = _sample_llm(ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal)
 
     if p is None:
         p = _option_fallback(bundle or {})
