@@ -26,7 +26,7 @@ CLASSIFICATION_ROWS = (
     "| Models | GPT-5.x |",
     "| Information set | competition facts; earnings / fundamentals; estimates; prices / returns; historical company information |",
     "| Learning / adaptation | zero-shot / prompted |",
-    "| Agent architecture | single-pass |",
+    "| Agent architecture | single-pass; self-consistency / committee |",
     "| Prediction construction | direct LLM score |",
 )
 
