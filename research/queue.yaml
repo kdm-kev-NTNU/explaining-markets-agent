@@ -4,7 +4,7 @@
 # (kjør fra web/ med PYTHONPATH=. og stien relativ til repo-rot)
 
 version: 1
-updated: "2026-11-20"
+updated: "2026-11-25"
 recommended_order: [1, 9, 13, 2, 3, 15, 10, 12, 14]
 
 items:
@@ -128,7 +128,7 @@ items:
   - id: 9
     title: "Model card — prize-eligibility"
     area: F4
-    status: queued
+    status: in_progress
     rank: 2
     risk: docs
     automation: auto_pr
@@ -138,6 +138,7 @@ items:
       - {kind: platform, ref: "github.com/explaining-markets/model-card-skill"}
     history:
       - {date: 2026-10-23, status: queued, note: "em-model-card v1; hard frist Q4-slutt 15. des"}
+      - {date: 2026-11-25, status: in_progress, note: "Utkast MODEL_CARD.md (em-model-card v1, disclosure=minimal). Ikke publisert i portalen."}
 
   - id: 10
     title: "Identitets-ablation (ticker-only arm)"
