@@ -13,8 +13,9 @@ from typing import Callable, Generic, TypeVar
 
 import httpx
 
-from .content import COMMITS_API_URL, FORSKNING_RAW_URL
+from .content import COMMITS_API_URL, FORSKNING_RAW_URL, QUEUE_RAW_URL
 from .research_parser import ResearchDigest, parse_forskning
+from .research_registry import QueueRegistry, parse_queue_yaml
 
 T = TypeVar("T")
 
@@ -88,6 +89,9 @@ class Sources:
         self._forskning_cache: TTLCache[Available[tuple[str, ResearchDigest]]] = TTLCache(
             ttl_seconds=ttl_seconds, clock=clock
         )
+        self._queue_cache: TTLCache[Available[QueueRegistry]] = TTLCache(
+            ttl_seconds=ttl_seconds, clock=clock
+        )
         self._commits_cache: TTLCache[Available[tuple[CommitInfo, ...]]] = TTLCache(
             ttl_seconds=ttl_seconds, clock=clock
         )
@@ -107,6 +111,20 @@ class Sources:
             digest = parse_forskning(text)
             result: Available[tuple[str, ResearchDigest]] = Available((text, digest))
             self._forskning_cache.set(result)
+            return result
+        except Exception as exc:
+            return Unavailable(reason=f"{type(exc).__name__}: {exc}")
+
+    def fetch_queue(self) -> Result[QueueRegistry]:
+        cached = self._queue_cache.get()
+        if cached is not None:
+            return cached
+        try:
+            resp = self._client.get(QUEUE_RAW_URL, timeout=FORSKNING_TIMEOUT)
+            resp.raise_for_status()
+            registry = parse_queue_yaml(resp.text)
+            result: Available[QueueRegistry] = Available(registry)
+            self._queue_cache.set(result)
             return result
         except Exception as exc:
             return Unavailable(reason=f"{type(exc).__name__}: {exc}")

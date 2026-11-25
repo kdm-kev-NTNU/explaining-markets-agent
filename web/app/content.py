@@ -12,6 +12,8 @@ REPO = "kdm-kev-NTNU/explaining-markets-agent"
 REPO_URL = f"https://github.com/{REPO}"
 FORSKNING_RAW_URL = f"https://raw.githubusercontent.com/{REPO}/main/research/FORSKNING.md"
 FORSKNING_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/FORSKNING.md"
+QUEUE_RAW_URL = f"https://raw.githubusercontent.com/{REPO}/main/research/queue.yaml"
+QUEUE_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/queue.yaml"
 COMMITS_API_URL = f"https://api.github.com/repos/{REPO}/commits?per_page=4"
 AUTHOR_URL = "https://github.com/kdm-kev-NTNU"
 COMPETITION_URL = "https://explainingmarkets.ai/"
@@ -224,7 +226,7 @@ DEPLOY_CHAIN = (
 LEARN_CHAIN = (
     ChainStep("Cron-jobb", "Skann arXiv", "Søker etter ny forskning."),
     ChainStep("LLM-filter", "Sorter", "Beholder bare det som kan gi poeng."),
-    ChainStep("FORSKNING.md", "Idébank", "Neste forbedring av AI-vurderingen."),
+    ChainStep("FORSKNING.md + queue.yaml", "Idébank", "Prosa i FORSKNING; status og auto-PR i queue.yaml."),
 )
 
 AGENT_DEEP_DIVE_FORMULAS = (

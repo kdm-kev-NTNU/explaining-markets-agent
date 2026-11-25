@@ -1,0 +1,226 @@
+# Implementeringskø — sannhetskilde for status/automatisering.
+# Prosa og paper-sammendrag lever i FORSKNING.md.
+# Valider: python -m app.research_registry --check research/queue.yaml
+# (kjør fra web/ med PYTHONPATH=. og stien relativ til repo-rot)
+
+version: 1
+updated: "2026-11-20"
+recommended_order: [1, 9, 13, 2, 3, 15, 10, 12, 14]
+
+items:
+  - id: 1
+    title: "Parser-robusthet i 2c (blokkerende)"
+    area: 2c
+    status: queued
+    rank: 1
+    risk: live_infra
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: platform, ref: "examples DisclosureItem schema 2026-10-09"}
+    history:
+      - {date: 2026-10-09, status: queued, note: "option-implied-stats er objekt; str|list[str] avviser hele bundlen"}
+
+  - id: 2
+    title: "Opsjonsimplisitt veiing i 3c"
+    area: 3c
+    status: queued
+    rank: 4
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: arxiv, ref: "2610.10407"}
+    history:
+      - {date: 2026-10-08, status: queued, note: "SOTA option-implied distributions; unngå dobbelttelling mot preview"}
+
+  - id: 3
+    title: "Scenario-mapping i 3c"
+    area: 3c
+    status: partial
+    rank: 5
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: platform, ref: "Anthropic earnings-preview skill / examples 2026-10-09"}
+    history:
+      - {date: 2026-10-09, status: queued, note: "bull/base/bear-grid med forventet aksjereaksjon"}
+      - {date: 2026-10-13, status: partial, note: "prompt-instruksjon implementert; deterministisk grid-ekstraksjon gjenstår", commit: "c7c99b6"}
+      - {date: 2026-10-16, status: partial, note: "quantide.cn NVDA-gjennomgang bekrefter metoden; grid-ekstraksjon fortsatt åpen"}
+
+  - id: 4
+    title: "Surprise-residualisering + novelty-/taler-vekting i 3c"
+    area: 3c
+    status: partial
+    rank: 10
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: arxiv, ref: "2610.04094"}
+      - {kind: arxiv, ref: "2604.13260"}
+      - {kind: arxiv, ref: "2610.22043"}
+    history:
+      - {date: 2026-10-09, status: queued, note: "OT-paper + Sidhu: unikt call-innhold og analyst/CFO oppveies"}
+      - {date: 2026-10-16, status: partial, note: "prompt-hygiene delvis; Khaybullina: tallfelt > tone"}
+
+  - id: 5
+    title: "Formålsnøytral to-trinns-ekstraksjon i 3c"
+    area: 3c
+    status: partial
+    rank: 11
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: other, ref: "NBER WP 35142"}
+      - {kind: other, ref: "SSRN 7177500"}
+      - {kind: arxiv, ref: "2610.22043"}
+      - {kind: arxiv, ref: "2610.24268"}
+      - {kind: arxiv, ref: "2610.29294"}
+      - {kind: arxiv, ref: "2611.01123"}
+    history:
+      - {date: 2026-10-09, status: queued, note: "purpose-neutral extraction → percentile mapping"}
+      - {date: 2026-10-23, status: partial, note: "avviksfelt ikke nivåer; gain/loss-kanonisering"}
+      - {date: 2026-11-06, status: partial, note: "Efe: offentlig-info-baseline før nye tekstfeatures"}
+
+  - id: 6
+    title: "Missing-data-grener"
+    area: 3c
+    status: queued
+    rank: 12
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: arxiv, ref: "2610.07798"}
+    history:
+      - {date: 2026-10-08, status: queued, note: "eksplisitt fallback når preview/opsjonsstats mangler"}
+
+  - id: 7
+    title: "Preview-håndtering etter arrangørens mønster"
+    area: 3c
+    status: partial
+    rank: 14
+    risk: live_prompt
+    automation: manual
+    added: 2026-W41
+    sources:
+      - {kind: platform, ref: "baseline-earnings-summary 2026-10-08"}
+    history:
+      - {date: 2026-10-08, status: queued, note: "preview før facts; trunkering treffer facts"}
+      - {date: 2026-10-13, status: partial, note: "stats→preview→facts + verdibasert seksjonskomprimering; arkiv-caveat gjenstår"}
+
+  - id: 8
+    title: "Modell/innsats-valg (3c)"
+    area: 3c
+    status: partial
+    rank: 15
+    risk: live_prompt
+    automation: manual
+    added: 2026-W42
+    sources:
+      - {kind: platform, ref: "explainingmarkets.ai/blog earnings-previews 2026-09-29"}
+    history:
+      - {date: 2026-10-13, status: partial, note: "gpt-6-astra + adaptive completion-params; overvåk LLM_MAX_TOKENS=3000", commit: "c7c99b6"}
+
+  - id: 9
+    title: "Model card — prize-eligibility"
+    area: F4
+    status: queued
+    rank: 2
+    risk: docs
+    automation: auto_pr
+    added: 2026-W43
+    due: "2026-12-15"
+    sources:
+      - {kind: platform, ref: "github.com/explaining-markets/model-card-skill"}
+    history:
+      - {date: 2026-10-23, status: queued, note: "em-model-card v1; hard frist Q4-slutt 15. des"}
+
+  - id: 10
+    title: "Identitets-ablation (ticker-only arm)"
+    area: 3b
+    status: queued
+    rank: 7
+    risk: offline_analysis
+    automation: auto_pr
+    added: 2026-W45
+    sources:
+      - {kind: arxiv, ref: "2611.03985"}
+      - {kind: arxiv, ref: "2611.01123"}
+      - {kind: arxiv, ref: "2611.22177"}
+    history:
+      - {date: 2026-11-06, status: queued, note: "OLIVIA/Efe: maskering lekker; mål identity prior"}
+      - {date: 2026-11-20, status: queued, note: "Wang: bytt til ticker+dato-arm; avklar Astra-cutoff før tolkning"}
+
+  - id: 11
+    title: "Agreement-vektet felt-ekstraksjon"
+    area: 3c
+    status: queued
+    rank: 13
+    risk: live_prompt
+    automation: manual
+    added: 2026-W45
+    sources:
+      - {kind: arxiv, ref: "2611.04217"}
+    history:
+      - {date: 2026-11-06, status: queued, note: "LENS: to parallelle ekstraksjoner; nedvekt ved uenighet"}
+
+  - id: 12
+    title: "Valideringshygiene for 3b (frys plan, tell trials)"
+    area: 3b
+    status: queued
+    rank: 8
+    risk: offline_analysis
+    automation: auto_pr
+    added: 2026-W45
+    sources:
+      - {kind: arxiv, ref: "2611.03985"}
+      - {kind: arxiv, ref: "2611.14325"}
+      - {kind: arxiv, ref: "2611.18934"}
+      - {kind: arxiv, ref: "2611.19849"}
+    history:
+      - {date: 2026-11-06, status: queued, note: "OLIVIA: frys analyseplan før arkivkjøring"}
+      - {date: 2026-11-13, status: queued, note: "Brini: arkiv ΔR² ikke systematisk oppblåst for avkastning"}
+      - {date: 2026-11-20, status: queued, note: "Zhang/Foley: tell trials, paret bootstrap, skriv cutoff-antagelse"}
+
+  - id: 13
+    title: "Surprise-konveksitet betinget på verdsettelsesusikkerhet"
+    area: 3c
+    status: queued
+    rank: 3
+    risk: live_prompt
+    automation: manual
+    added: 2026-W46
+    sources:
+      - {kind: arxiv, ref: "2611.15747"}
+    history:
+      - {date: 2026-11-13, status: queued, note: "Graeber et al.: heterogen λ; arkiv-ablasjon først (kø 12-format)"}
+
+  - id: 14
+    title: "Referanseklasse i prompten (ICL)"
+    area: 3c
+    status: queued
+    rank: 9
+    risk: live_prompt
+    automation: manual
+    added: 2026-W46
+    sources:
+      - {kind: arxiv, ref: "2611.13550"}
+    history:
+      - {date: 2026-11-13, status: queued, note: "deHaan & Huang: 5–15 vintage-begrensede referanserader"}
+
+  - id: 15
+    title: "Prediksjonsstøy: multi-run + spredningsvakt"
+    area: F4
+    status: queued
+    rank: 6
+    risk: observability
+    automation: auto_pr
+    added: 2026-W47
+    sources:
+      - {kind: arxiv, ref: "2611.19530"}
+    history:
+      - {date: 2026-11-20, status: queued, note: "Wang: (b) passiv spredningslogging først, deretter (a) multi-run; auto_pr dekker kun logging/vakt"}

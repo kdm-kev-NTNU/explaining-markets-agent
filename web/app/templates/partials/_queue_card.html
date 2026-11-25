@@ -1,0 +1,37 @@
+<article class="em-qcard" id="kø-{{ card.item.id }}">
+  <div class="em-qcard-top">
+    <span class="em-qcard-id">#{{ card.item.id }}</span>
+    <span class="em-qcard-risk">{{ card.item.risk }}</span>
+  </div>
+  <h4 class="em-qcard-title">{{ card.item.title }}</h4>
+  <div class="em-qcard-meta">
+    <span class="em-chip em-chip-sm">{{ card.area_label }}</span>
+    {% if card.auto_eligible %}
+    <span class="em-chip em-chip-sm em-chip-accent">auto → PR</span>
+    {% else %}
+    <span class="em-chip em-chip-sm">manuell</span>
+    {% endif %}
+  </div>
+  {% if card.source_papers %}
+  <div class="em-qcard-sources">
+    {% for p in card.source_papers %}
+    <a href="{{ p.url }}" class="em-qcard-src">arXiv:{{ p.arxiv_id }}</a>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if card.item.history %}
+  <details class="em-qcard-hist">
+    <summary>Historikk ({{ card.item.history|length }})</summary>
+    <ol class="em-hist-list">
+      {% for h in card.item.history|reverse %}
+      <li>
+        <time>{{ h.date }}</time>
+        <span>{{ h.note }}</span>
+        {% if h.commit %}<code>{{ h.commit }}</code>{% endif %}
+        {% if h.pr %}<a href="{{ h.pr }}">PR</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+</article>

@@ -1,0 +1,28 @@
+<article class="em-paper">
+  <h3>{{ card.paper.title }}</h3>
+  <div class="meta">
+    {% if card.paper.authors %}{{ card.paper.authors }}{% endif %}
+    {% if card.paper.date %}{% if card.paper.authors %} · {% endif %}{{ card.paper.date }}{% endif %}
+    {% if card.paper.arxiv_id %}
+      {% if card.paper.authors or card.paper.date %} · {% endif %}
+      {% if card.paper.url %}
+      <a href="{{ card.paper.url }}">arXiv:{{ card.paper.arxiv_id }}</a>
+      {% else %}
+      arXiv:{{ card.paper.arxiv_id }}
+      {% endif %}
+    {% endif %}
+  </div>
+  {% if card.queue_links %}
+  <div class="em-paper-links">
+    {% for link in card.queue_links %}
+    <a class="em-chip em-chip-sm em-chip-accent" href="#kø-{{ link.id }}">→ kø {{ link.id }} ({{ link.status_label }})</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if card.paper.body %}
+  <details>
+    <summary>Les mer</summary>
+    <div class="em-md">{{ card.paper.body | markdown | safe }}</div>
+  </details>
+  {% endif %}
+</article>

@@ -128,3 +128,26 @@ def test_latest_commits_error_is_unavailable() -> None:
     sources = Sources(client=client, ttl_seconds=600)
     result = sources.latest_commits()
     assert isinstance(result, Unavailable)
+
+
+def test_fetch_queue_success_and_error() -> None:
+    yaml_body = (
+        "version: 1\nitems:\n"
+        "  - id: 9\n    title: Model card\n    area: F4\n    status: queued\n"
+        "    rank: 1\n    risk: docs\n    automation: auto_pr\n    added: 2026-W43\n"
+        "    history:\n      - {date: 2026-10-23, status: queued, note: start}\n"
+    )
+
+    def ok(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=yaml_body)
+
+    sources = Sources(client=httpx.Client(transport=httpx.MockTransport(ok)), ttl_seconds=600)
+    result = sources.fetch_queue()
+    assert isinstance(result, Available)
+    assert result.value.items[0].id == 9
+
+    def fail(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, text="missing")
+
+    sources2 = Sources(client=httpx.Client(transport=httpx.MockTransport(fail)), ttl_seconds=600)
+    assert isinstance(sources2.fetch_queue(), Unavailable)
