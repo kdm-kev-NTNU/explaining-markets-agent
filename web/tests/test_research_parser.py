@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.research_parser import parse_forskning
+from app.research_parser import parse_forskning, parse_rejected_block
 
 FIXTURE = """# FORSKNING — test
 
@@ -77,6 +77,47 @@ def test_missing_uke_section_still_finds_weeks() -> None:
     assert digest.weeks[0].papers[0].title == "Tittel"
 
 
+def test_parses_rejected_block_in_fixture() -> None:
+    digest = parse_forskning(FIXTURE)
+    assert digest.weeks[0].rejected
+    assert digest.weeks[0].rejected[0].arxiv_id == "2610.18435"
+    assert "LLM-peer-review" in digest.weeks[0].rejected[0].title
+
+
+def test_parse_rejected_block_multi() -> None:
+    raw = (
+        "(Forkastet: 2611.25951 «Measuring climate credibility?» — kapitalstruktur. "
+        "2611.19292 «Zero-Shot Weight-Space Programming» — ingen finans. "
+        "2611.18130 JFinBench — japansk eksamen.)"
+    )
+    items = parse_rejected_block(raw)
+    assert len(items) == 3
+    assert items[0].arxiv_id == "2611.25951"
+    assert items[0].title == "Measuring climate credibility?"
+    assert "kapitalstruktur" in items[0].reason
+    assert items[2].arxiv_id == "2611.18130"
+    assert "JFinBench" in items[2].title
+
+
+def test_bruk_bold_is_not_a_paper() -> None:
+    md = """## Ukentlige funn
+
+### Uke 2026-W47 (20. nov 2026)
+
+1 beholdt, 0 forkastet.
+
+**Real Paper Title**
+Author, 2026-11-17 · https://arxiv.org/abs/2611.22177
+Body with **Bruk (forsterker kø 12 — tall):** more text.
+
+**Bruk (forsterker kø 12 — andre uavhengige tallfesting etter Brini 2611.14325):**
+not a paper.
+"""
+    digest = parse_forskning(md)
+    assert len(digest.weeks[0].papers) == 1
+    assert digest.weeks[0].papers[0].arxiv_id == "2611.22177"
+
+
 def test_real_forskning_md_if_present() -> None:
     """Regression mot repoets FORSKNING.md når den finnes."""
     path = Path(__file__).resolve().parents[2] / "research" / "FORSKNING.md"
@@ -89,3 +130,13 @@ def test_real_forskning_md_if_present() -> None:
     first = next(p for w in digest.weeks for p in w.papers)
     assert first.title
     assert first.arxiv_id or first.url
+    # Forkastet-blokker parses (regresjon: tidligere kastet)
+    assert any(w.rejected for w in digest.weeks)
+    # OLIVIA multi-line meta
+    olivia = next(
+        (p for w in digest.weeks for p in w.papers if p.arxiv_id == "2611.03985"),
+        None,
+    )
+    assert olivia is not None
+    assert "Thinking Fast" in olivia.title
+    assert olivia.authors

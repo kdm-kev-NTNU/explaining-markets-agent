@@ -4,7 +4,9 @@
 <div class="em-label">Forskning</div>
 <div class="em-section-title">Hva agenten lærer hver uke</div>
 <p class="em-section-sub">
-  Hver fredag skanner en cron arXiv. Det som kan forbedre agenten, lander her som korte kort.
+  Papers kategorisert etter funnet-uke, koblet til implementeringskøen med status.
+  <a href="{{ forskning_blob_url }}">FORSKNING.md</a>
+  {% if queue_blob_url %} · <a href="{{ queue_blob_url }}">queue.yaml</a>{% endif %}
 </p>
 
 {% if not forskning_available %}
@@ -12,7 +14,7 @@
   Kunne ikke hente research/FORSKNING.md fra GitHub akkurat nå.
   Se filen direkte: <a href="{{ forskning_blob_url }}">lenke</a>.
 </div>
-{% elif not digest.parse_ok or not weeks %}
+{% elif not digest or not digest.parse_ok or not weeks %}
 <div class="em-warn">
   Kunne ikke parse Forskning.md til kort. Viser rå markdown under.
 </div>
@@ -20,57 +22,156 @@
   <summary>Rå FORSKNING.md</summary>
   <div class="body em-md">{{ raw_md | markdown | safe }}</div>
 </details>
-{% else %}
-  {% set latest = weeks[0] %}
-  {% if latest.new_count is not none or latest.kept_count is not none or latest.rejected_count is not none %}
-  <div class="em-grid em-grid-3">
-    {% if latest.new_count is not none %}
-    <div class="em-stat"><div class="v">{{ latest.new_count }}</div><div class="l">Nye papers denne uken</div></div>
-    {% endif %}
-    {% if latest.kept_count is not none %}
-    <div class="em-stat"><div class="v">{{ latest.kept_count }}</div><div class="l">Beholdt for agenten</div></div>
-    {% endif %}
-    {% if latest.rejected_count is not none %}
-    <div class="em-stat"><div class="v">{{ latest.rejected_count }}</div><div class="l">Forkastet</div></div>
-    {% endif %}
+{% elif view %}
+  {% set s = view.stats %}
+  {% set f = view.filters %}
+
+  {% if view.queue_warning %}
+  <div class="em-warn">{{ view.queue_warning }} — viser papers uten kø-status.</div>
+  {% endif %}
+
+  {% if f.warnings %}
+  <div class="em-warn">
+    {% for w in f.warnings %}{{ w }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="em-grid em-grid-4">
+    <div class="em-stat"><div class="v">{{ s.kept_papers }}</div><div class="l">Beholdt papers</div></div>
+    <div class="em-stat"><div class="v">{{ s.rejected_papers }}</div><div class="l">Forkastet</div></div>
+    <div class="em-stat"><div class="v">{{ s.queue_queued }}</div><div class="l">I kø</div></div>
+    <div class="em-stat"><div class="v">{{ s.queue_partial }}</div><div class="l">Delvis</div></div>
+  </div>
+  <div class="em-spacer"></div>
+
+  {% if view.next_in_queue %}
+  <div class="em-next-strip">
+    <div class="em-next-label">Neste i køen</div>
+    <div class="em-next-row">
+      {% for card in view.next_in_queue %}
+      <a class="em-next-chip" href="#kø-{{ card.item.id }}">
+        <strong>#{{ card.item.id }}</strong>
+        <span>{{ card.item.title }}</span>
+      </a>
+      {% endfor %}
+    </div>
   </div>
   <div class="em-spacer"></div>
   {% endif %}
 
-  {% for week in weeks[:2] %}
-  <div class="em-section-title">{{ week.heading }}</div>
-  {% if not week.papers %}
-  <p class="em-caption">Ingen papers beholdt denne uken.</p>
-  {% else %}
-    {% for paper in week.papers %}
-    <div class="em-paper">
-      <h3>{{ paper.title }}</h3>
-      <div class="meta">
-        {% if paper.authors %}{{ paper.authors }}{% endif %}
-        {% if paper.date %}{% if paper.authors %} · {% endif %}{{ paper.date }}{% endif %}
-        {% if paper.arxiv_id %}
-          {% if paper.authors or paper.date %} · {% endif %}
-          {% if paper.url %}
-          <a href="{{ paper.url }}">arXiv:{{ paper.arxiv_id }}</a>
-          {% else %}
-          arXiv:{{ paper.arxiv_id }}
-          {% endif %}
-        {% endif %}
-      </div>
-      {% if paper.body %}
-      <details>
-        <summary>Les mer</summary>
-        <div class="em-md">{{ paper.body | markdown | safe }}</div>
-      </details>
-      {% endif %}
-    </div>
+  <nav class="em-filters" aria-label="Filtrer forskning">
+    <span class="em-filters-label">Filtrer:</span>
+    <a class="em-filter{% if not f.uke and not f.status and not f.area and not f.linked_only %} active{% endif %}"
+       href="/forskning">Alle</a>
+    {% for wid in view.week_options[:6] %}
+    <a class="em-filter{% if f.uke == wid %} active{% endif %}"
+       href="/forskning?uke={{ wid }}{% if f.status %}&amp;status={{ f.status }}{% endif %}{% if f.area %}&amp;area={{ f.area }}{% endif %}{% if f.linked_only %}&amp;linked=1{% endif %}">{{ wid }}</a>
     {% endfor %}
+    <a class="em-filter{% if f.status == 'queued' %} active{% endif %}"
+       href="/forskning?status=queued{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}">Kø</a>
+    <a class="em-filter{% if f.status == 'partial' %} active{% endif %}"
+       href="/forskning?status=partial{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}">Delvis</a>
+    <a class="em-filter{% if f.status == 'done' %} active{% endif %}"
+       href="/forskning?status=done{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}">Implementert</a>
+    <a class="em-filter{% if f.area == '3c' %} active{% endif %}"
+       href="/forskning?area=3c{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}">3c</a>
+    <a class="em-filter{% if f.area == '3b' %} active{% endif %}"
+       href="/forskning?area=3b{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}">3b</a>
+    <a class="em-filter{% if f.linked_only %} active{% endif %}"
+       href="/forskning?linked=1{% if f.uke %}&amp;uke={{ f.uke }}{% endif %}{% if f.status %}&amp;status={{ f.status }}{% endif %}">Kun med kø-lenke</a>
+  </nav>
+  <div class="em-spacer"></div>
+
+  {% if view.queue_available %}
+  <div class="em-section-title">Implementeringskø</div>
+  <p class="em-caption">
+    Status fra <code>queue.yaml</code>.
+    {% if s.next_auto_pr_id %}Neste auto-PR: #{{ s.next_auto_pr_id }}.{% endif %}
+  </p>
+  <div class="em-board">
+    {% for col_key, col_label in [('queued','Kø'),('in_progress','Pågår'),('partial','Delvis'),('done','Implementert'),('parked','Parkert')] %}
+    <section class="em-board-col">
+      <header class="em-board-head">
+        <span>{{ col_label }}</span>
+        <span class="em-board-count">{{ view.board[col_key]|length }}</span>
+      </header>
+      {% for card in view.board[col_key] %}
+        {% include "partials/_queue_card.html" %}
+      {% else %}
+      <p class="em-caption">—</p>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+  <div class="em-spacer-lg"></div>
   {% endif %}
+
+  <div class="em-section-title">Funnet-tidslinje</div>
+  {% for week in view.weeks %}
+  <section class="em-week" id="uke-{{ week.week_id }}">
+    <h3 class="em-week-title">{{ week.week_heading }}</h3>
+    {% if week.kept_count is not none or week.rejected_count is not none %}
+    <p class="em-caption">
+      {% if week.new_count is not none %}{{ week.new_count }} nye · {% endif %}
+      {% if week.kept_count is not none %}{{ week.kept_count }} beholdt{% endif %}
+      {% if week.rejected_count is not none %} · {{ week.rejected_count }} forkastet{% endif %}
+    </p>
+    {% endif %}
+    {% if week.summary %}
+    <details class="em-week-summary">
+      <summary>Ukens sammendrag</summary>
+      <div class="em-md">{{ week.summary | markdown | safe }}</div>
+    </details>
+    {% endif %}
+    {% for card in week.papers %}
+      {% include "partials/_paper_card.html" %}
+    {% else %}
+    <p class="em-caption">Ingen papers i dette filteret.</p>
+    {% endfor %}
+    {% if week.rejected %}
+    <details class="em-rejected">
+      <summary>Forkastet ({{ week.rejected|length }})</summary>
+      <ul class="em-rejected-list">
+        {% for r in week.rejected %}
+        <li>
+          <a href="https://arxiv.org/abs/{{ r.arxiv_id }}">{{ r.arxiv_id }}</a>
+          <strong>{{ r.title }}</strong>
+          {% if r.reason %}— {{ r.reason }}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+  </section>
   {% endfor %}
 
   <details class="em-deep">
     <summary>Se hele FORSKNING.md fra repoet</summary>
     <div class="body em-md">{{ raw_md | markdown | safe }}</div>
   </details>
+{% else %}
+  {# Fallback: gammel ukesvisning uten view #}
+  {% for week in weeks[:2] %}
+  <div class="em-section-title">{{ week.heading }}</div>
+  {% for paper in week.papers %}
+  <div class="em-paper">
+    <h3>{{ paper.title }}</h3>
+    <div class="meta">
+      {% if paper.authors %}{{ paper.authors }}{% endif %}
+      {% if paper.date %}{% if paper.authors %} · {% endif %}{{ paper.date }}{% endif %}
+      {% if paper.arxiv_id %}
+        {% if paper.authors or paper.date %} · {% endif %}
+        {% if paper.url %}<a href="{{ paper.url }}">arXiv:{{ paper.arxiv_id }}</a>{% else %}arXiv:{{ paper.arxiv_id }}{% endif %}
+      {% endif %}
+    </div>
+    {% if paper.body %}
+    <details>
+      <summary>Les mer</summary>
+      <div class="em-md">{{ paper.body | markdown | safe }}</div>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
 {% endif %}
 {% endblock %}

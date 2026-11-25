@@ -16,7 +16,8 @@ from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
 
 from . import content
-from .sources import Available, Sources
+from .research_view import build_research_view, parse_filters
+from .sources import Available, Unavailable, Sources
 
 HERE = Path(__file__).resolve().parent
 md = MarkdownIt("commonmark", {"html": False})
@@ -107,15 +108,25 @@ def agent_page(request: Request) -> HTMLResponse:
 def forskning_page(request: Request) -> HTMLResponse:
     sources: Sources = request.app.state.sources
     result = sources.fetch_forskning()
+    queue_result = sources.fetch_queue()
+    filters = parse_filters(
+        uke=request.query_params.get("uke"),
+        status=request.query_params.get("status"),
+        area=request.query_params.get("area"),
+        linked=request.query_params.get("linked"),
+    )
     ctx = _base_context(request, "Forskning")
     ctx.update(
         {
             "forskning_blob_url": content.FORSKNING_BLOB_URL,
+            "queue_blob_url": content.QUEUE_BLOB_URL,
             "forskning": result,
             "forskning_available": isinstance(result, Available),
             "raw_md": None,
             "digest": None,
             "weeks": (),
+            "view": None,
+            "filters": filters,
         }
     )
     if isinstance(result, Available):
@@ -123,4 +134,12 @@ def forskning_page(request: Request) -> HTMLResponse:
         ctx["raw_md"] = raw_md
         ctx["digest"] = digest
         ctx["weeks"] = digest.weeks if digest.parse_ok else ()
+        queue = queue_result.value if isinstance(queue_result, Available) else None
+        queue_warning = None if isinstance(queue_result, Available) else (
+            f"Kunne ikke hente kø: {queue_result.reason}"
+        )
+        if digest.parse_ok:
+            ctx["view"] = build_research_view(
+                digest, queue, filters, queue_warning=queue_warning
+            )
     return templates.TemplateResponse(request, "forskning.html", ctx)

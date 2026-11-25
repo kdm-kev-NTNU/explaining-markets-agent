@@ -3,6 +3,9 @@
 > Vedlikeholdes ukentlig av explaining-markets-research-cron (fredag 09:15).
 > Hvert paper er filtrert mot scoring-mekanikken i ../NOTES.md: ΔR² over
 > surprise-benchmarken; kalibrering scorees ikke, kun rangeringsinformasjon.
+>
+> **To filer:** prosa her i `FORSKNING.md`; maskinlesbar kø-status i
+> [`queue.yaml`](queue.yaml). Cron-kontrakt: [`CRON_CONTRACT.md`](CRON_CONTRACT.md).
 
 ## Ukentlige funn
 
