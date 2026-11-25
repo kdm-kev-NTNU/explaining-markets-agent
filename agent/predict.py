@@ -302,6 +302,28 @@ def option_stats_signal(bundle: dict) -> str:
     return "Option-market expectations, measured BEFORE the release: " + "; ".join(parts) + "."
 
 
+def _plain_lines(content: object) -> list[str]:
+    """Text lines from arbitrary JSON content.
+
+    A stats object is not a string or a list of strings. Reading it as one
+    must not raise and must not drop the rest of the bundle. Objects and
+    empty values contribute no lines.
+    """
+    if isinstance(content, str):
+        text = content.strip()
+        return [text] if text else []
+    if isinstance(content, bool) or content is None:
+        return []
+    if isinstance(content, (int, float)):
+        return [str(content)]
+    if isinstance(content, list):
+        lines: list[str] = []
+        for element in content:
+            lines.extend(_plain_lines(element))
+        return lines
+    return []
+
+
 def format_materials(bundle: object) -> str:
     """Turn the event's bundle into the text the model reads.
 
@@ -333,18 +355,17 @@ def format_materials(bundle: object) -> str:
     for item in items:
         if item.get("id") in (FACTS_ID, PREVIEW_ID, OPTION_STATS_ID):
             continue
-        content = item.get("content")
-        if isinstance(content, list) and all(isinstance(c, str) for c in content):
-            content = "\n".join(content)
-        if isinstance(content, str) and content.strip():
+        lines = _plain_lines(item.get("content"))
+        if lines:
             label = item.get("id") or item.get("kind") or "item"
-            sections.append(f"Additional material ({label}):\n{content[:OTHER_ITEM_MAX_CHARS]}")
+            text = "\n".join(lines)[:OTHER_ITEM_MAX_CHARS]
+            sections.append(f"Additional material ({label}):\n{text}")
 
-    facts = (by_id.get(FACTS_ID) or {}).get("content")
-    if isinstance(facts, list) and facts:
+    fact_lines = _plain_lines((by_id.get(FACTS_ID) or {}).get("content"))
+    if fact_lines:
         sections.append(
             "Facts from the earnings call:\n"
-            + "\n".join(f"{n}. {fact}" for n, fact in enumerate(facts, start=1))
+            + "\n".join(f"{n}. {fact}" for n, fact in enumerate(fact_lines, start=1))
         )
 
     return "\n\n".join(sections)

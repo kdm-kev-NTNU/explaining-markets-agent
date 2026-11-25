@@ -230,6 +230,26 @@ def test_statistics_without_a_usable_volatility_are_left_out() -> None:
         assert "Option-market" not in text and "Facts from the earnings call" in text
 
 
+def test_an_option_stats_object_does_not_reject_the_bundle() -> None:
+    """Queue 1: stats content is an object. A str|list[str] read must not drop the rest."""
+    text = predict_module.format_materials(
+        _bundle(
+            {**STATS_ITEM, "content": STATS},
+            PREVIEW_ITEM,
+            {**FACTS_ITEM, "content": "Guidance was raised."},
+            {"id": "bullets", "kind": "list", "content": ["keep me", {"rows": [[1]]}, None, True, 3]},
+            {"id": "future-table", "kind": "table", "content": {"rows": [[1, 2]]}},
+            "not even an object",
+        )
+    )
+    assert "Implied earnings volatility: 8.5%" in text
+    assert "Research note written BEFORE the release" in text
+    assert "1. Guidance was raised." in text
+    assert "Additional material (bullets):\nkeep me\n3" in text
+    assert "future-table" not in text
+    assert "rows" not in text
+
+
 def test_a_kind_this_code_has_never_seen_is_never_an_error() -> None:
     text = predict_module.format_materials(
         _bundle(

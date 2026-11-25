@@ -11,7 +11,7 @@ items:
   - id: 1
     title: "Parser-robusthet i 2c (blokkerende)"
     area: 2c
-    status: queued
+    status: done
     rank: 1
     risk: live_infra
     automation: manual
@@ -20,6 +20,7 @@ items:
       - {kind: platform, ref: "examples DisclosureItem schema 2026-10-09"}
     history:
       - {date: 2026-10-09, status: queued, note: "option-implied-stats er objekt; str|list[str] avviser hele bundlen"}
+      - {date: 2026-11-25, status: done, note: "Stats-objekt, streng-facts og blandet liste leses uten å droppe resten av bundlen."}
 
   - id: 2
     title: "Opsjonsimplisitt veiing i 3c"
