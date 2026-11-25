@@ -58,6 +58,11 @@ image = (
 # look handled. This Dict persists across redeploys, so "done" is durable.
 seen_webhooks = modal.Dict.from_name("em-webhook-dedupe", create_if_missing=True)
 
+# Submitted percentiles by calendar quarter, for the passive spread log.
+# Written only after the API has accepted the prediction. Reading it back
+# never changes the number that was submitted. A failed write is ignored.
+spread_observations = modal.Dict.from_name("em-prediction-spread", create_if_missing=True)
+
 # Credentials are read from your local .env at deploy time (see .env.example).
 # Prefer Modal's secret store instead? See docs/advanced.md.
 secrets = [modal.Secret.from_dotenv(__file__)]
@@ -105,6 +110,10 @@ def predict_and_submit(event: dict, webhook_id: str | None = None):
     down. The delivery has already been ACKed by the time this starts, which
     means nothing upstream will retry it — the single retry configured on the
     model call in predict.py is the only one you get.
+
+    After a scored submit is accepted, the percentile is appended to the
+    quarter's spread log. That write cannot change the submitted number, and
+    a failure there still leaves the delivery marked done.
     """
     from explaining_markets.client import submit_predictions
     from explaining_markets.config import Config
@@ -112,6 +121,7 @@ def predict_and_submit(event: dict, webhook_id: str | None = None):
     from predict import predict
 
     submitted = False
+    predictions = None
     try:
         predictions = neutral_predictions(event) if is_test(event) else predict(event)
         submit_predictions(
@@ -123,8 +133,23 @@ def predict_and_submit(event: dict, webhook_id: str | None = None):
     except Exception as exc:
         # Log loudly — `modal app logs explaining-markets-starter` finds it.
         print(f"[ERROR] prediction failed for event {event.get('event_id')}: {exc}")
+    else:
+        # After acceptance. A logging failure must not look like a missed submit.
+        _record_spread(event, predictions)
     finally:
         _release(webhook_id, submitted)
+
+
+def _record_spread(event, predictions):
+    """Log quarter spread for a scored submit. Test deliveries are not scored."""
+    if not predictions or event.get("event_type") == "TEST":
+        return
+    try:
+        from explaining_markets.dispersion import observe_submitted
+
+        observe_submitted(event, predictions, spread_observations)
+    except Exception as exc:
+        print(f"[WARN] dispersion log failed for event {event.get('event_id')}: {exc}")
 
 
 @app.function(image=image, secrets=secrets)
