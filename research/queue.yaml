@@ -144,7 +144,7 @@ items:
   - id: 10
     title: "Identitets-ablation (ticker-only arm)"
     area: 3b
-    status: queued
+    status: in_progress
     rank: 7
     risk: offline_analysis
     automation: auto_pr
@@ -156,6 +156,7 @@ items:
     history:
       - {date: 2026-11-06, status: queued, note: "OLIVIA/Efe: maskering lekker; mål identity prior"}
       - {date: 2026-11-20, status: queued, note: "Wang: bytt til ticker+dato-arm; avklar Astra-cutoff før tolkning"}
+      - {date: 2026-11-25, status: in_progress, note: "Frosset plan og arm-script under research/ablations/. Tre trials. Ingen arkivkjøring. Cutoff ukjent.", pr: "https://github.com/kdm-kev-NTNU/explaining-markets-agent/pull/8"}
 
   - id: 11
     title: "Agreement-vektet felt-ekstraksjon"
