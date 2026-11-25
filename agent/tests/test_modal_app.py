@@ -202,3 +202,79 @@ def test_worker_submits_and_marks_done(monkeypatch) -> None:
     fake.put("evt_test_def", "in_flight")
     worker(_test_event("evt_test_def"), "evt_test_def")
     assert "evt_test_def" not in fake.data
+
+
+def _scored_event() -> dict:
+    return {
+        "id": "wh_scored",
+        "event_id": "evt-scored",
+        "event_type": "EARNINGS_RELEASE",
+        "event_datetime": "2026-11-02T21:00:00Z",
+        "focal_assets": [{"identifier_type": "TICKER", "identifier_value": "AAPL"}],
+        "prediction_deadline": "2099-01-01T00:00:00+00:00",
+    }
+
+
+def test_worker_logs_spread_after_accepted_submit(monkeypatch) -> None:
+    """The spread log sees the percentile that was submitted, and only then."""
+    monkeypatch.setenv("EM_API_KEY", "test-key")
+    monkeypatch.setenv("EM_WEBHOOK_SECRET", SECRET)
+    fake = FakeDict()
+    spread: dict = {}
+    monkeypatch.setattr(modal_app, "seen_webhooks", fake)
+    monkeypatch.setattr(modal_app, "spread_observations", spread)
+
+    import predict as predict_module
+
+    prediction = [{"identifier_value": "AAPL", "predicted_percentile": 0.25}]
+    monkeypatch.setattr(predict_module, "predict", lambda event: prediction)
+
+    import explaining_markets.client as client_mod
+
+    submitted: list[dict] = []
+    monkeypatch.setattr(
+        client_mod,
+        "submit_predictions",
+        lambda *, event_id, predictions, config: submitted.append(
+            {"event_id": event_id, "predictions": predictions}
+        ),
+    )
+
+    worker = modal_app.predict_and_submit.get_raw_f()
+    fake.put("wh_scored", "in_flight")
+    worker(_scored_event(), "wh_scored")
+
+    assert submitted[0]["predictions"] == prediction
+    assert spread["2026Q4"]["percentiles"] == [0.25]
+    assert fake.data["wh_scored"] == "done"
+
+
+def test_spread_log_failure_still_marks_submitted(monkeypatch) -> None:
+    """A broken spread log does not turn an accepted submit into a failure."""
+    monkeypatch.setenv("EM_API_KEY", "test-key")
+    monkeypatch.setenv("EM_WEBHOOK_SECRET", SECRET)
+    fake = FakeDict()
+    monkeypatch.setattr(modal_app, "seen_webhooks", fake)
+
+    import predict as predict_module
+
+    monkeypatch.setattr(
+        predict_module,
+        "predict",
+        lambda event: [{"identifier_value": "AAPL", "predicted_percentile": 0.4}],
+    )
+
+    import explaining_markets.client as client_mod
+    import explaining_markets.dispersion as dispersion
+
+    monkeypatch.setattr(client_mod, "submit_predictions", lambda **kwargs: None)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("log down")
+
+    monkeypatch.setattr(dispersion, "observe_submitted", boom)
+
+    worker = modal_app.predict_and_submit.get_raw_f()
+    fake.put("wh_scored", "in_flight")
+    worker(_scored_event(), "wh_scored")
+    assert fake.data["wh_scored"] == "done"

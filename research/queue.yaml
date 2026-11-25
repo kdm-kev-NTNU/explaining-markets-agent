@@ -216,7 +216,7 @@ items:
   - id: 15
     title: "Prediksjonsstøy: multi-run + spredningsvakt"
     area: F4
-    status: queued
+    status: in_progress
     rank: 6
     risk: observability
     automation: auto_pr
@@ -225,3 +225,4 @@ items:
       - {kind: arxiv, ref: "2611.19530"}
     history:
       - {date: 2026-11-20, status: queued, note: "Wang: (b) passiv spredningslogging først, deretter (a) multi-run; auto_pr dekker kun logging/vakt"}
+      - {date: 2026-11-25, status: in_progress, note: "Passiv spredningslogg etter akseptert submit (sd, midtbånd, hale). Ingen terskel, ingen multi-run.", pr: "https://github.com/kdm-kev-NTNU/explaining-markets-agent/pull/6"}

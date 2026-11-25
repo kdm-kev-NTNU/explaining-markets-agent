@@ -7,6 +7,7 @@ Modules:
   webhook_verification — vendored HMAC-SHA256 verifier (stdlib only)
   client               — submits predictions to the competition API
   event_utils          — small helpers for working with event payloads
+  dispersion           — passive log of submitted-percentile spread
 """
 
 from explaining_markets.webhook_verification import (
