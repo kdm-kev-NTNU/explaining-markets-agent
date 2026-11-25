@@ -205,7 +205,7 @@ def predict(event: dict) -> list[dict]:
     bundle = summary.json()
 
     materials = format_materials(bundle)
-    option_signal = option_stats_signal(bundle)
+    option_signal = option_stats_signal(bundle) + "\n" + materials_coverage(bundle)
 
     # One model call per focal asset, in series — so the LLM budget below is
     # per asset, not per event. Today every event carries a single asset; if
@@ -300,6 +300,52 @@ def option_stats_signal(bundle: dict) -> str:
     if not parts:
         return "Option data: unavailable for this event."
     return "Option-market expectations, measured BEFORE the release: " + "; ".join(parts) + "."
+
+
+_PREVIEW_IMPLIED_MOVE = re.compile(
+    r"implied\s+(?:earnings\s+)?move|options?[- ]implied|straddle|options?\s+(?:are\s+)?pric",
+    re.I,
+)
+
+
+def materials_coverage(bundle: object) -> str:
+    """Deterministic note on which inputs arrived, for the user prompt.
+
+    Missing preview or option stats is said explicitly so the model does not
+    fill the gap with a ticker prior. When the preview already quotes an
+    option-implied move, the note says not to count that size twice.
+    """
+    items = bundle.get("items") if isinstance(bundle, dict) else None
+    by_id = {
+        i.get("id"): i for i in (items if isinstance(items, list) else []) if isinstance(i, dict)
+    }
+    preview = (by_id.get(PREVIEW_ID) or {}).get("content")
+    has_preview = isinstance(preview, str) and bool(preview.strip())
+    has_stats = _stat_value(bundle if isinstance(bundle, dict) else {}, "implied_earnings_volatility") is not None
+    has_facts = bool(_plain_lines((by_id.get(FACTS_ID) or {}).get("content")))
+
+    missing = [
+        name
+        for name, present in (
+            ("pre-release research note", has_preview),
+            ("option-market statistics", has_stats),
+            ("earnings-call facts", has_facts),
+        )
+        if not present
+    ]
+    lines = ["Materials missing: " + ", ".join(missing) + "." if missing else "Materials missing: none."]
+    if not has_preview and not has_stats:
+        lines.append(
+            "No pre-release prior arrived. Rank from the call facts alone and stay near "
+            "the middle unless the facts are lopsided. Do not substitute general knowledge "
+            "of the company for the missing prior."
+        )
+    elif has_preview and has_stats and _PREVIEW_IMPLIED_MOVE.search(preview):
+        lines.append(
+            "The research note already quotes an option-implied move. Use the option "
+            "statistics for direction (skew) only; do not count the size of the move again."
+        )
+    return "\n".join(lines)
 
 
 def _plain_lines(content: object) -> list[str]:

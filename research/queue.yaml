@@ -25,7 +25,7 @@ items:
   - id: 2
     title: "Opsjonsimplisitt veiing i 3c"
     area: 3c
-    status: queued
+    status: done
     rank: 4
     risk: live_prompt
     automation: manual
@@ -34,6 +34,7 @@ items:
       - {kind: arxiv, ref: "2610.10407"}
     history:
       - {date: 2026-10-08, status: queued, note: "SOTA option-implied distributions; unngå dobbelttelling mot preview"}
+      - {date: 2026-11-25, status: done, note: "Skew gir retning, implied move gir størrelse. Når previewen siterer implied move, sier en deterministisk linje at størrelsen ikke skal telles igjen."}
 
   - id: 3
     title: "Scenario-mapping i 3c"
@@ -89,7 +90,7 @@ items:
   - id: 6
     title: "Missing-data-grener"
     area: 3c
-    status: queued
+    status: done
     rank: 12
     risk: live_prompt
     automation: manual
@@ -98,6 +99,7 @@ items:
       - {kind: arxiv, ref: "2610.07798"}
     history:
       - {date: 2026-10-08, status: queued, note: "eksplisitt fallback når preview/opsjonsstats mangler"}
+      - {date: 2026-11-25, status: done, note: "Brukerprompten lister manglende materials. Uten preview og stats: ranger fra facts, hold midten, ingen ticker-prior."}
 
   - id: 7
     title: "Preview-håndtering etter arrangørens mønster"

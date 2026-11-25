@@ -250,6 +250,27 @@ def test_an_option_stats_object_does_not_reject_the_bundle() -> None:
     assert "rows" not in text
 
 
+def test_coverage_names_missing_inputs_and_blocks_a_ticker_prior() -> None:
+    """Queue 6: an absent prior is stated, not silently replaced."""
+    full = predict_module.materials_coverage(BUNDLE)
+    assert full.startswith("Materials missing: none.")
+    facts_only = predict_module.materials_coverage(_bundle(FACTS_ITEM))
+    assert "pre-release research note" in facts_only
+    assert "option-market statistics" in facts_only
+    assert "earnings-call facts" not in facts_only
+    assert "Do not substitute general knowledge" in facts_only
+    assert predict_module.materials_coverage(None).startswith("Materials missing:")
+
+
+def test_coverage_warns_against_double_counting_the_implied_move() -> None:
+    """Queue 2: preview that quotes the implied move gets a direction-only note."""
+    quoting = {**PREVIEW_ITEM, "content": PREVIEW + "\n## Trading Setup\nImplied move ±6.8%.\n"}
+    note = predict_module.materials_coverage(_bundle(FACTS_ITEM, quoting, STATS_ITEM))
+    assert "do not count the size of the move again" in note
+    plain = predict_module.materials_coverage(_bundle(FACTS_ITEM, PREVIEW_ITEM, STATS_ITEM))
+    assert "do not count the size" not in plain
+
+
 def test_a_kind_this_code_has_never_seen_is_never_an_error() -> None:
     text = predict_module.format_materials(
         _bundle(
