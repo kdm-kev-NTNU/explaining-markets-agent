@@ -115,7 +115,10 @@ def test_real_queue_yaml_validates() -> None:
         pytest.skip("queue.yaml mangler")
     reg = load_queue_yaml(QUEUE_PATH)
     assert len(reg.items) == 15
-    assert reg.next_auto_pr() is not None
+    nxt = reg.next_auto_pr()
+    if nxt is not None:
+        assert nxt.status == "queued"
+        assert nxt.automation == "auto_pr"
     # live-risiko skal aldri være auto_pr
     for it in reg.items:
         if it.risk in ("live_prompt", "live_infra"):

@@ -50,6 +50,8 @@ Nå skal samme beslutning også lande som YAML:
 ## Regler cronen må følge
 
 - `risk` i `{live_prompt, live_infra}` ⇒ `automation: manual` (validator avviser alt annet).
+  Det hindrer ikke auto-PR-agenten i å implementere punktet. `manual` betyr bare
+  at feltet ikke kan stå som `auto_pr`.
 - `auto_pr` bare for `docs`, `offline_analysis`, `observability`.
 - Hver `sources[kind=arxiv].ref` må finnes som **beholdt** paper i `FORSKNING.md` samme uke (eller allerede i arkivet).
 - `history` er append-only; siste entry sin `status` = feltet `status`.

@@ -7,7 +7,7 @@ Opprett denne via **Agents Window** → Automations (chat-handoff er ikke tilgje
 | Felt | Verdi |
 |------|--------|
 | Name | Explaining Markets — queue auto-PR |
-| Description | Hver fredag: ta neste lavrisiko-kø-punkt (`automation: auto_pr`) og åpne en PR til manuell review. Aldri merge. Aldri rør live-prompt. |
+| Description | Hver fredag: ta neste kø-punkt, også `live_prompt` og `live_infra`, åpne en PR, og merge den når pytest er grønn. |
 | Trigger | Cron fredag 11:00 (`0 11 * * 5`) |
 | Tools | GitHub (branch + PR), terminal/pytest |
 | Repo | `kdm-kev-NTNU/explaining-markets-agent` (default branch) |
@@ -22,12 +22,15 @@ Du kjører i explaining-markets-agent.
    cd web && python -m app.research_registry --check ../research/queue.yaml --forskning ../research/FORSKNING.md
    Stopp ved feil.
 
-2. Velg neste punkt: status == queued OG automation == auto_pr, lavest rank.
-   Hvis ingen: avslutt uten endringer (skriv kort commit-melding i PR-kommentar: «ingen auto_pr-kandidat»).
+2. Velg neste punkt blant status == queued, lavest rank.
+   Rekkefølge: først automation == auto_pr, deretter risk live_prompt eller live_infra
+   (de står som automation: manual; validatoren krever det, og det blokkerer ikke arbeidet).
+   Hvis ingen: merge likevel åpne, grønne kø-PR-er, og avslutt.
 
-3. HARD STOP: hvis risk er live_prompt eller live_infra, ikke rør punktet (validator skal allerede ha forhindret auto_pr).
-   Ikke endre agent/predict.py, SYSTEM_PROMPT, eller Modal-webhook-kode.
-   Ikke kall OpenAI. Ikke kjør arkiv-prediksjoner.
+3. live_prompt og live_infra skal implementeres, ikke hoppes over.
+   Da er endring i agent/predict.py, SYSTEM_PROMPT og Modal-webhook lov
+   når punktet krever det. Behold scoring-kontrakten i APPROACH.md.
+   Ikke kall OpenAI. Ikke kjør arkiv-prediksjoner. Ikke publiser model card i portalen.
 
 4. Lag branch auto/queue-<id>.
 
@@ -35,14 +38,16 @@ Du kjører i explaining-markets-agent.
    - docs (kø 9): utkast til MODEL_CARD.md via model-card-skill-mønsteret; ikke publiser.
    - offline_analysis (kø 10/12): frosset plan + script under research/ablations/; ingen kjøreresultater.
    - observability (kø 15): passiv spredningslogging (sd / andel i midtbånd) — ingen multi-run LLM-kall.
+   - live_prompt / live_infra: den konkrete endringen kø-punktet beskriver, med tester.
 
-6. Kjør pytest i agent/ og web/.
+6. Kjør pytest i agent/ og web/. Stopp ved feil. Ikke merge en rød PR.
 
 7. Oppdater queue.yaml: status → in_progress, append history med date, note, pr-URL (når kjent).
+   Etter merge: status → partial hvis noe av punktet gjenstår, ellers done.
 
 8. Åpne PR med tittel TYPE: kort beskrivelse (FEATURE/TEST/DOC).
-   I body: kø-id, trials=1 (eller antall varianter forsøkt), cutoff-antagelse ukjent for Astra,
-   «ingen merge — manuell review». Ikke merge.
+   I body: kø-id, trials=1 (eller antall varianter forsøkt), cutoff-antagelse ukjent for Astra.
+   Når pytest er grønn: merge PR-en inn i main. Ikke force-push.
 ```
 
 ## Første kandidater (allerede merket `auto_pr` i queue.yaml)
