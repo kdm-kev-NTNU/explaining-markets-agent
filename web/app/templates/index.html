@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Explaining Markets · AI-agenten{% endblock %}
+{% block content %}
+<section class="em-hero">
+  <div class="em-eyebrow">{{ hero.eyebrow }}</div>
+  <h1>{{ hero.title }}</h1>
+  <p>{{ hero.subtitle }}</p>
+  <div class="em-hero-metrics">
+    {% for m in hero.metrics %}
+    <div class="em-hero-metric">
+      <div class="v">{{ m.value }}</div>
+      <div class="l">{{ m.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="em-section-title">Slik fungerer det</div>
+<p class="em-section-sub">Tre steg. Ingen finansjargon nødvendig.</p>
+<div class="em-grid em-grid-3">
+  {% for s in steps %}
+  <div class="em-card">
+    <div class="em-num">{{ s.number }}</div>
+    <h3>{{ s.title }}</h3>
+    <p>{{ s.body }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="em-spacer-lg"></div>
+
+<div class="em-section-title">Hvorfor er dette vanskelig?</div>
+<div class="em-grid em-grid-why">
+  <div class="em-why"><p>{{ why }}</p></div>
+  <div class="em-analogy">
+    <div class="t">{{ analogy_title }}</div>
+    <p>{{ analogy_body }}</p>
+  </div>
+</div>
+
+<div class="em-spacer"></div>
+
+<div class="em-section-title">Hva fungerer best?</div>
+<p class="em-section-sub">Jo mer kontekst agenten får før og under call-et, jo mer forklarer den.</p>
+<div class="em-chart">
+  {% for bar in chart %}
+  <div class="em-chart-row">
+    <div class="em-chart-label">{{ bar.label }}</div>
+    <div class="em-chart-track">
+      <div class="em-chart-bar" style="width: {{ (bar.value / chart_max * 100)|round(1) }}%"></div>
+    </div>
+    <div class="em-chart-value">{{ '%.3f'|format(bar.value) }}</div>
+  </div>
+  {% endfor %}
+</div>
+<p class="em-caption">{{ chart_caption }}</p>
+
+<div class="em-spacer"></div>
+
+<div class="em-section-title">Hva jeg bygde</div>
+<p class="em-section-sub">Kevin Dennis Mazali — autonom webhook-agent i live konkurranse.</p>
+<div class="em-chips">
+  {% for chip in tech_chips %}
+  <span class="em-chip">{{ chip }}</span>
+  {% endfor %}
+</div>
+<div class="em-cta"><a href="{{ repo_url }}" target="_blank" rel="noopener">Se koden på GitHub →</a></div>
+
+<details class="em-deep">
+  <summary>For de spesielt interesserte: scoring, look-ahead og Optiver-overflaten</summary>
+  <div class="body">
+    {% for title, body in deep_dive %}
+    <p><strong>{{ title }}</strong> {{ body }}</p>
+    {% endfor %}
+    <p>
+      Arrangør: <a href="{{ competition_url }}">explainingmarkets.ai</a> ·
+      repo: <a href="{{ repo_url }}">{{ repo }}</a>
+    </p>
+  </div>
+</details>
+{% endblock %}

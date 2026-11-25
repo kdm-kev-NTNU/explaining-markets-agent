@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from research_parser import parse_forskning
+from app.research_parser import parse_forskning
 
 FIXTURE = """# FORSKNING — test
 

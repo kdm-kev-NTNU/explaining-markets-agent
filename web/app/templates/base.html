@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Explaining Markets · AI-agenten{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="em-shell">
+    <aside class="em-sidebar">
+      <h1>Explaining Markets</h1>
+      <p class="caption">
+        Presentert av <a href="{{ author_url }}">Kevin Dennis Mazali</a> · Q4 2026
+      </p>
+      <nav class="em-nav" aria-label="Hovednavigasjon">
+        {% for href, label in nav %}
+        <a href="{{ href }}" class="{% if label == active %}active{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <hr class="em-sidebar-divider">
+      <div class="em-live-status">
+        <div><strong>Live-status</strong></div>
+        {% if commits_available and latest_commit %}
+        <div class="ok">Agenten er deployet på Modal</div>
+        <div>
+          Siste commit:
+          <a href="{{ repo_url }}/commit/{{ latest_commit.sha }}">{{ latest_commit.sha }}</a>
+          ({{ latest_commit.date }})
+        </div>
+        <div class="muted">{{ latest_commit.msg }}</div>
+        {% else %}
+        <div class="muted">Agenten er deployet på Modal.</div>
+        {% endif %}
+      </div>
+      <hr class="em-sidebar-divider">
+      <p class="caption">
+        <a href="{{ competition_url }}">explainingmarkets.ai</a> ·
+        <a href="{{ repo_url }}">Repo</a>
+      </p>
+    </aside>
+    <main class="em-main">
+      {% block content %}{% endblock %}
+      <footer class="em-footer">
+        Bygget av <a href="{{ author_url }}">Kevin Dennis Mazali</a>
+        · kode: <a href="{{ repo_url }}">{{ repo }}</a>
+        · ingen hemmeligheter i denne appen; alt innhold er offentlige kilder.
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

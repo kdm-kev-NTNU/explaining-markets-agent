@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Forskning · Explaining Markets{% endblock %}
+{% block content %}
+<div class="em-label">Forskning</div>
+<div class="em-section-title">Hva agenten lærer hver uke</div>
+<p class="em-section-sub">
+  Hver fredag skanner en cron arXiv. Det som kan forbedre agenten, lander her som korte kort.
+</p>
+
+{% if not forskning_available %}
+<div class="em-warn">
+  Kunne ikke hente research/FORSKNING.md fra GitHub akkurat nå.
+  Se filen direkte: <a href="{{ forskning_blob_url }}">lenke</a>.
+</div>
+{% elif not digest.parse_ok or not weeks %}
+<div class="em-warn">
+  Kunne ikke parse Forskning.md til kort. Viser rå markdown under.
+</div>
+<details class="em-deep" open>
+  <summary>Rå FORSKNING.md</summary>
+  <div class="body em-md">{{ raw_md | markdown | safe }}</div>
+</details>
+{% else %}
+  {% set latest = weeks[0] %}
+  {% if latest.new_count is not none or latest.kept_count is not none or latest.rejected_count is not none %}
+  <div class="em-grid em-grid-3">
+    {% if latest.new_count is not none %}
+    <div class="em-stat"><div class="v">{{ latest.new_count }}</div><div class="l">Nye papers denne uken</div></div>
+    {% endif %}
+    {% if latest.kept_count is not none %}
+    <div class="em-stat"><div class="v">{{ latest.kept_count }}</div><div class="l">Beholdt for agenten</div></div>
+    {% endif %}
+    {% if latest.rejected_count is not none %}
+    <div class="em-stat"><div class="v">{{ latest.rejected_count }}</div><div class="l">Forkastet</div></div>
+    {% endif %}
+  </div>
+  <div class="em-spacer"></div>
+  {% endif %}
+
+  {% for week in weeks[:2] %}
+  <div class="em-section-title">{{ week.heading }}</div>
+  {% if not week.papers %}
+  <p class="em-caption">Ingen papers beholdt denne uken.</p>
+  {% else %}
+    {% for paper in week.papers %}
+    <div class="em-paper">
+      <h3>{{ paper.title }}</h3>
+      <div class="meta">
+        {% if paper.authors %}{{ paper.authors }}{% endif %}
+        {% if paper.date %}{% if paper.authors %} · {% endif %}{{ paper.date }}{% endif %}
+        {% if paper.arxiv_id %}
+          {% if paper.authors or paper.date %} · {% endif %}
+          {% if paper.url %}
+          <a href="{{ paper.url }}">arXiv:{{ paper.arxiv_id }}</a>
+          {% else %}
+          arXiv:{{ paper.arxiv_id }}
+          {% endif %}
+        {% endif %}
+      </div>
+      {% if paper.body %}
+      <details>
+        <summary>Les mer</summary>
+        <div class="em-md">{{ paper.body | markdown | safe }}</div>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% endfor %}
+
+  <details class="em-deep">
+    <summary>Se hele FORSKNING.md fra repoet</summary>
+    <div class="body em-md">{{ raw_md | markdown | safe }}</div>
+  </details>
+{% endif %}
+{% endblock %}
