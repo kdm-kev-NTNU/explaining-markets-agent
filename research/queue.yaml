@@ -194,7 +194,7 @@ items:
   - id: 13
     title: "Surprise-konveksitet betinget på verdsettelsesusikkerhet"
     area: 3c
-    status: queued
+    status: partial
     rank: 3
     risk: live_prompt
     automation: manual
@@ -203,6 +203,7 @@ items:
       - {kind: arxiv, ref: "2611.15747"}
     history:
       - {date: 2026-11-13, status: queued, note: "Graeber et al.: heterogen λ; arkiv-ablasjon først (kø 12-format)"}
+      - {date: 2026-11-25, status: partial, note: "Trial 13A frosset: monoton surprise-transform gitt opsjons-u. Prompt urørt til paret kjøring er positiv. Ingen arkivkjøring. Cutoff ukjent."}
 
   - id: 14
     title: "Referanseklasse i prompten (ICL)"
