@@ -25,7 +25,7 @@ items:
   - id: 2
     title: "Opsjonsimplisitt veiing i 3c"
     area: 3c
-    status: queued
+    status: done
     rank: 4
     risk: live_prompt
     automation: manual
@@ -34,11 +34,12 @@ items:
       - {kind: arxiv, ref: "2610.10407"}
     history:
       - {date: 2026-10-08, status: queued, note: "SOTA option-implied distributions; unngå dobbelttelling mot preview"}
+      - {date: 2026-11-25, status: done, note: "Skew gir retning, implied move gir størrelse. Når previewen siterer implied move, sier en deterministisk linje at størrelsen ikke skal telles igjen."}
 
   - id: 3
     title: "Scenario-mapping i 3c"
     area: 3c
-    status: partial
+    status: done
     rank: 5
     risk: live_prompt
     automation: manual
@@ -49,6 +50,7 @@ items:
       - {date: 2026-10-09, status: queued, note: "bull/base/bear-grid med forventet aksjereaksjon"}
       - {date: 2026-10-13, status: partial, note: "prompt-instruksjon implementert; deterministisk grid-ekstraksjon gjenstår", commit: "c7c99b6"}
       - {date: 2026-10-16, status: partial, note: "quantide.cn NVDA-gjennomgang bekrefter metoden; grid-ekstraksjon fortsatt åpen"}
+      - {date: 2026-11-25, status: done, note: "Deterministisk uttrekk av bull/base/bear-rader før komprimering. Gridet står foran previewen i materials."}
 
   - id: 4
     title: "Surprise-residualisering + novelty-/taler-vekting i 3c"
@@ -89,7 +91,7 @@ items:
   - id: 6
     title: "Missing-data-grener"
     area: 3c
-    status: queued
+    status: done
     rank: 12
     risk: live_prompt
     automation: manual
@@ -98,11 +100,12 @@ items:
       - {kind: arxiv, ref: "2610.07798"}
     history:
       - {date: 2026-10-08, status: queued, note: "eksplisitt fallback når preview/opsjonsstats mangler"}
+      - {date: 2026-11-25, status: done, note: "Brukerprompten lister manglende materials. Uten preview og stats: ranger fra facts, hold midten, ingen ticker-prior."}
 
   - id: 7
     title: "Preview-håndtering etter arrangørens mønster"
     area: 3c
-    status: partial
+    status: done
     rank: 14
     risk: live_prompt
     automation: manual
@@ -112,11 +115,12 @@ items:
     history:
       - {date: 2026-10-08, status: queued, note: "preview før facts; trunkering treffer facts"}
       - {date: 2026-10-13, status: partial, note: "stats→preview→facts + verdibasert seksjonskomprimering; arkiv-caveat gjenstår"}
+      - {date: 2026-11-25, status: done, note: "Arkiv-caveaten hører til kø 12. Gjenstående live-arbeid er dekket av grid-uttrekket i kø 3."}
 
   - id: 8
     title: "Modell/innsats-valg (3c)"
     area: 3c
-    status: partial
+    status: done
     rank: 15
     risk: live_prompt
     automation: manual
@@ -125,6 +129,7 @@ items:
       - {kind: platform, ref: "explainingmarkets.ai/blog earnings-previews 2026-09-29"}
     history:
       - {date: 2026-10-13, status: partial, note: "gpt-6-astra + adaptive completion-params; overvåk LLM_MAX_TOKENS=3000", commit: "c7c99b6"}
+      - {date: 2026-11-25, status: done, note: "finish_reason=length logges med LLM_MAX_TOKENS og modell, så trunkering er synlig i Modal-loggen."}
 
   - id: 9
     title: "Model card — prize-eligibility"
@@ -162,7 +167,7 @@ items:
   - id: 11
     title: "Agreement-vektet felt-ekstraksjon"
     area: 3c
-    status: queued
+    status: partial
     rank: 13
     risk: live_prompt
     automation: manual
@@ -171,6 +176,7 @@ items:
       - {kind: arxiv, ref: "2611.04217"}
     history:
       - {date: 2026-11-06, status: queued, note: "LENS: to parallelle ekstraksjoner; nedvekt ved uenighet"}
+      - {date: 2026-11-25, status: partial, note: "Agreement-vekt på prediksjonsnivå: tilten halveres når parallelle utvalg sprer seg mer enn 0.30. Felt-ekstraksjon venter på kø 5."}
 
   - id: 12
     title: "Valideringshygiene for 3b (frys plan, tell trials)"
@@ -232,3 +238,4 @@ items:
       - {date: 2026-11-20, status: queued, note: "Wang: (b) passiv spredningslogging først, deretter (a) multi-run; auto_pr dekker kun logging/vakt"}
       - {date: 2026-11-25, status: in_progress, note: "Passiv spredningslogg etter akseptert submit (sd, midtbånd, hale). Ingen terskel, ingen multi-run.", pr: "https://github.com/kdm-kev-NTNU/explaining-markets-agent/pull/6"}
       - {date: 2026-11-25, status: partial, note: "Spredningslogg merget i #6. Multi-run og kalibrert terskel gjenstår og er utenfor auto_pr.", pr: "https://github.com/kdm-kev-NTNU/explaining-markets-agent/pull/6"}
+      - {date: 2026-11-25, status: partial, note: "Multi-run: PREDICTION_SAMPLES (standard 2) parallelle kall, snitt. Kalibrert spredningsterskel trenger en kvartal med logg."}

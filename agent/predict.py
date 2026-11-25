@@ -7,9 +7,10 @@ Scoring (see ../APPROACH.md and ../CONCEPTS.md):
 Per focal asset:
   1. Fetch the materials bundle from information_url (facts, preview, option stats).
   2. Deterministic option signal (skew + vol) as prompt context and fallback.
-  3. One LLM call via an OpenAI-compatible endpoint
-     (OPENAI_BASE_URL + OPENAI_API_KEY), returning
-     JSON {"predicted_percentile": x, "reason": "..."}.
+  3. PREDICTION_SAMPLES parallel LLM calls via an OpenAI-compatible endpoint
+     (OPENAI_BASE_URL + OPENAI_API_KEY), each returning
+     JSON {"predicted_percentile": x, "reason": "..."}; averaged, with the
+     tilt halved when the samples disagree.
   4. On LLM failure: option signal alone; then 0.5 (delivery beats imputation;
      constant baselines earn nothing — last resort).
 
@@ -21,11 +22,12 @@ from __future__ import annotations
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from openai import BadRequestError, OpenAI
 
-from explaining_markets.config import openai_model, openai_reasoning_effort
+from explaining_markets.config import openai_model, openai_reasoning_effort, prediction_samples
 
 _client: OpenAI | None = None  # lazy: importing this file must not require a key
 
@@ -205,7 +207,7 @@ def predict(event: dict) -> list[dict]:
     bundle = summary.json()
 
     materials = format_materials(bundle)
-    option_signal = option_stats_signal(bundle)
+    option_signal = option_stats_signal(bundle) + "\n" + materials_coverage(bundle)
 
     # One model call per focal asset, in series — so the LLM budget below is
     # per asset, not per event. Today every event carries a single asset; if
@@ -302,6 +304,52 @@ def option_stats_signal(bundle: dict) -> str:
     return "Option-market expectations, measured BEFORE the release: " + "; ".join(parts) + "."
 
 
+_PREVIEW_IMPLIED_MOVE = re.compile(
+    r"implied\s+(?:earnings\s+)?move|options?[- ]implied|straddle|options?\s+(?:are\s+)?pric",
+    re.I,
+)
+
+
+def materials_coverage(bundle: object) -> str:
+    """Deterministic note on which inputs arrived, for the user prompt.
+
+    Missing preview or option stats is said explicitly so the model does not
+    fill the gap with a ticker prior. When the preview already quotes an
+    option-implied move, the note says not to count that size twice.
+    """
+    items = bundle.get("items") if isinstance(bundle, dict) else None
+    by_id = {
+        i.get("id"): i for i in (items if isinstance(items, list) else []) if isinstance(i, dict)
+    }
+    preview = (by_id.get(PREVIEW_ID) or {}).get("content")
+    has_preview = isinstance(preview, str) and bool(preview.strip())
+    has_stats = _stat_value(bundle if isinstance(bundle, dict) else {}, "implied_earnings_volatility") is not None
+    has_facts = bool(_plain_lines((by_id.get(FACTS_ID) or {}).get("content")))
+
+    missing = [
+        name
+        for name, present in (
+            ("pre-release research note", has_preview),
+            ("option-market statistics", has_stats),
+            ("earnings-call facts", has_facts),
+        )
+        if not present
+    ]
+    lines = ["Materials missing: " + ", ".join(missing) + "." if missing else "Materials missing: none."]
+    if not has_preview and not has_stats:
+        lines.append(
+            "No pre-release prior arrived. Rank from the call facts alone and stay near "
+            "the middle unless the facts are lopsided. Do not substitute general knowledge "
+            "of the company for the missing prior."
+        )
+    elif has_preview and has_stats and _PREVIEW_IMPLIED_MOVE.search(preview):
+        lines.append(
+            "The research note already quotes an option-implied move. Use the option "
+            "statistics for direction (skew) only; do not count the size of the move again."
+        )
+    return "\n".join(lines)
+
+
 def _plain_lines(content: object) -> list[str]:
     """Text lines from arbitrary JSON content.
 
@@ -322,6 +370,30 @@ def _plain_lines(content: object) -> list[str]:
             lines.extend(_plain_lines(element))
         return lines
     return []
+
+
+_SCENARIO_ROW = re.compile(r"^[\s|*#>\-_]*(bull|base|bear)\b", re.I)
+SCENARIO_ROW_MAX_CHARS = 300
+
+
+def extract_scenario_grid(preview: str) -> list[str]:
+    """Bull/base/bear rows from the preview, verbatim, first of each kind.
+
+    Works for markdown table rows and bullet lines. Extracted before
+    compression so the grid survives even when the preview is cut.
+    """
+    rows: dict[str, str] = {}
+    for line in preview.splitlines():
+        match = _SCENARIO_ROW.match(line)
+        if not match:
+            continue
+        kind = match.group(1).lower()
+        if kind in rows:
+            continue
+        body = line[match.start(1):].replace("**", "").strip().strip("|")
+        cells = [c.strip() for c in body.split("|")]
+        rows[kind] = " | ".join(c for c in cells if c)[:SCENARIO_ROW_MAX_CHARS]
+    return [rows[k] for k in ("bull", "base", "bear") if k in rows]
 
 
 def format_materials(bundle: object) -> str:
@@ -347,6 +419,11 @@ def format_materials(bundle: object) -> str:
 
     preview = (by_id.get(PREVIEW_ID) or {}).get("content")
     if isinstance(preview, str) and preview.strip():
+        grid = extract_scenario_grid(preview)
+        if grid:
+            sections.append(
+                "Scenario grid from the research note (extracted verbatim):\n" + "\n".join(grid)
+            )
         text = _compress_preview(preview)
         sections.append(
             "Research note written BEFORE the release (expectations, not results):\n" + text
@@ -475,9 +552,15 @@ def _ask_llm(*, ticker: str, event_type: str, materials: str, option_signal: str
     if resp is None:
         raise last_exc  # every parameter form rejected — never seen, but don't loop
     try:
-        content = (resp.choices[0].message.content or "").strip()
+        choice = resp.choices[0]
+        content = (choice.message.content or "").strip()
     except Exception:
         return None
+    if getattr(choice, "finish_reason", None) == "length":
+        print(
+            f"[WARN] LLM output truncated for {ticker} at LLM_MAX_TOKENS={LLM_MAX_TOKENS} "
+            f"(model={openai_model()})"
+        )
     m = re.search(r"\{[^{}]*\}", content, re.DOTALL)
     if not m:
         return None
@@ -505,16 +588,55 @@ def _option_fallback(bundle: dict) -> float | None:
     return 0.5 - capped * 1.5  # negative skew → below 0.5; positive → above
 
 
+DISAGREEMENT_SPREAD = 0.30  # max-min across samples above this halves the tilt
+
+
+def combine_samples(samples: list[float]) -> float | None:
+    """Mean of the samples, pulled halfway to 0.5 when they disagree widely.
+
+    Disagreeing samples are a low-confidence read; halving the tilt keeps
+    the rank order of confident events above them without discarding the
+    direction.
+    """
+    if not samples:
+        return None
+    mean = sum(samples) / len(samples)
+    if max(samples) - min(samples) > DISAGREEMENT_SPREAD:
+        return 0.5 + (mean - 0.5) / 2
+    return mean
+
+
+def _sample_llm(*, ticker: str, event_type: str, materials: str, option_signal: str) -> float | None:
+    """`prediction_samples()` parallel `_ask_llm` calls; failed samples are dropped."""
+    n = prediction_samples()
+
+    def one(_: int) -> float | None:
+        try:
+            return _ask_llm(
+                ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal
+            )
+        except Exception as exc:
+            print(f"[WARN] LLM call failed for {ticker}: {exc}")
+            return None
+
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        samples = [p for p in pool.map(one, range(n)) if p is not None]
+    p = combine_samples(samples)
+    if n > 1 and samples:
+        print(
+            f"[INFO] LLM samples for {ticker}: "
+            + ", ".join(f"{s:.3f}" for s in samples)
+            + f" → {p:.3f}"
+        )
+    return p
+
+
 def _predict_one(*, ticker: str, event_type: str, materials: str, option_signal: str,
                  bundle: dict | None = None) -> float:
     if event_type == "TEST":
         return 0.5  # portal test deliveries: neutral, never scored
 
-    p = None
-    try:
-        p = _ask_llm(ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal)
-    except Exception as exc:
-        print(f"[WARN] LLM call failed for {ticker}: {exc}")
+    p = _sample_llm(ticker=ticker, event_type=event_type, materials=materials, option_signal=option_signal)
 
     if p is None:
         p = _option_fallback(bundle or {})

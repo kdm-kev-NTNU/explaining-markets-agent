@@ -7,6 +7,8 @@ disclosure fetch so the test is fully offline.
 
 from __future__ import annotations
 
+import pytest
+
 import predict as predict_module
 
 
@@ -250,6 +252,48 @@ def test_an_option_stats_object_does_not_reject_the_bundle() -> None:
     assert "rows" not in text
 
 
+def test_scenario_grid_is_extracted_from_tables_and_bullets() -> None:
+    """Queue 3: grid rows reach the model even if compression drops the section."""
+    table = (
+        "## Scenario Analysis\n| Scenario | EPS | Reaction |\n|---|---|---|\n"
+        "| **Bear** | $1.05 | -8% |\n| Base | $1.20 | +1% |\n| Bull | $1.35 | +7% |\n"
+        "Bull case risk is priced.\n"
+    )
+    assert predict_module.extract_scenario_grid(table) == [
+        "Bull | $1.35 | +7%",
+        "Base | $1.20 | +1%",
+        "Bear | $1.05 | -8%",
+    ]
+    bullets = "- **Bull case:** beat and raise, +6%\n- Basement project delayed\n"
+    assert predict_module.extract_scenario_grid(bullets) == ["Bull case: beat and raise, +6%"]
+    assert predict_module.extract_scenario_grid(PREVIEW) == []
+
+    grid_item = {**PREVIEW_ITEM, "content": PREVIEW + table}
+    text = predict_module.format_materials(_bundle(grid_item))
+    assert text.index("Scenario grid from the research note") < text.index("Research note written")
+
+
+def test_coverage_names_missing_inputs_and_blocks_a_ticker_prior() -> None:
+    """Queue 6: an absent prior is stated, not silently replaced."""
+    full = predict_module.materials_coverage(BUNDLE)
+    assert full.startswith("Materials missing: none.")
+    facts_only = predict_module.materials_coverage(_bundle(FACTS_ITEM))
+    assert "pre-release research note" in facts_only
+    assert "option-market statistics" in facts_only
+    assert "earnings-call facts" not in facts_only
+    assert "Do not substitute general knowledge" in facts_only
+    assert predict_module.materials_coverage(None).startswith("Materials missing:")
+
+
+def test_coverage_warns_against_double_counting_the_implied_move() -> None:
+    """Queue 2: preview that quotes the implied move gets a direction-only note."""
+    quoting = {**PREVIEW_ITEM, "content": PREVIEW + "\n## Trading Setup\nImplied move ±6.8%.\n"}
+    note = predict_module.materials_coverage(_bundle(FACTS_ITEM, quoting, STATS_ITEM))
+    assert "do not count the size of the move again" in note
+    plain = predict_module.materials_coverage(_bundle(FACTS_ITEM, PREVIEW_ITEM, STATS_ITEM))
+    assert "do not count the size" not in plain
+
+
 def test_a_kind_this_code_has_never_seen_is_never_an_error() -> None:
     text = predict_module.format_materials(
         _bundle(
@@ -333,3 +377,73 @@ def test_ask_llm_sends_luna_max_without_temperature(monkeypatch) -> None:
     assert sent["reasoning_effort"] == "max"
     assert sent["max_completion_tokens"] == predict_module.LLM_MAX_TOKENS
     assert "temperature" not in sent
+
+
+def test_truncated_output_is_logged(monkeypatch, capsys) -> None:
+    """Queue 8: finish_reason=length is visible in the logs."""
+    class _Truncated:
+        def create(self, **_):
+            class _Choice:
+                finish_reason = "length"
+
+                class message:
+                    content = '{"predicted_percentile": 0.5'
+
+            class _Response:
+                choices = [_Choice()]
+
+            return _Response()
+
+    client = _CapturingClient()
+    client.completions = _Truncated()
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(predict_module, "_client", client)
+    predict_module._ask_llm(ticker="AAPL", event_type="EARNINGS_RELEASE", materials="f", option_signal="s")
+    assert "truncated for AAPL" in capsys.readouterr().out
+
+
+def test_samples_are_averaged_and_disagreement_halves_the_tilt() -> None:
+    """Queue 15a and 11: mean of samples; wide spread pulls toward 0.5."""
+    assert predict_module.combine_samples([]) is None
+    assert predict_module.combine_samples([0.7]) == 0.7
+    assert predict_module.combine_samples([0.6, 0.7]) == pytest.approx(0.65)
+    assert predict_module.combine_samples([0.4, 0.9]) == pytest.approx(0.575)
+    a, b = predict_module.combine_samples([0.8, 0.85]), predict_module.combine_samples([0.5, 0.95])
+    assert a > b > 0.5
+
+
+def test_predict_one_runs_parallel_samples_and_drops_failures(monkeypatch) -> None:
+    monkeypatch.setenv("PREDICTION_SAMPLES", "3")
+    answers = iter([0.6, None, RuntimeError("boom")])
+    calls = []
+
+    def fake_ask(**kwargs):
+        calls.append(kwargs["ticker"])
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(predict_module, "_ask_llm", fake_ask)
+    p = predict_module._predict_one(
+        ticker="AAPL", event_type="EARNINGS_RELEASE", materials="m", option_signal="s"
+    )
+    assert calls == ["AAPL"] * 3
+    assert p == 0.6
+
+
+def test_all_samples_failing_falls_back_to_option_stats(monkeypatch) -> None:
+    monkeypatch.setattr(predict_module, "_ask_llm", lambda **_: None)
+    p = predict_module._predict_one(
+        ticker="AAPL", event_type="EARNINGS_RELEASE", materials="m", option_signal="s",
+        bundle=_bundle(STATS_ITEM),
+    )
+    assert p == pytest.approx(0.5 + 0.0412 * 1.5)
+
+
+@pytest.mark.parametrize("raw,expected", [("", 2), ("1", 1), ("5", 5), ("0", 2), ("9", 2), ("x", 2)])
+def test_prediction_samples_is_bounded(monkeypatch, raw, expected) -> None:
+    from explaining_markets.config import prediction_samples
+
+    monkeypatch.setenv("PREDICTION_SAMPLES", raw)
+    assert prediction_samples() == expected
