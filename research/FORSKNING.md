@@ -9,6 +9,43 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W48 (25. nov 2026)
+
+Collect OK: 6 nye arXiv-papers, 0 feilede søk. 0 beholdt, 6 forkastet.
+`state.json` ligger ikke i klonen (gitignorert), så dedup ble seedet fra de 43
+arXiv-ID-ene som allerede står i denne fila før collect. Vinduet er de siste
+21 dagene etter det settet — i praksis 20.–24. nov, etter at W47 allerede har
+tatt alt eldre.
+
+Ingen av de seks er en ny signalkilde, og ingen er en metodisk korreksjon av
+hvordan vi måler ΔR². Alle treffer via det brede llm-finans-søket eller via
+ordstrengen «earnings call», og utfallet er noe annet enn tverrsnittsrangering
+av car1 utover surprise-benchmarken. **Ingen nye «Bruk (kø N)» og ingen
+statusflytt.** `queue.yaml` er gjennomgått og ikke mutert; anbefalt rekkefølge
+står. Web-sjekk: blogg, hjemmeside og GitHub-org uendret (se
+«Plattform-endringer» 2026-11-25).
+
+(Forkastet: 2611.33050 «Worth the Wait?» — responstid og streaming flytter
+blinde preferansestemmer på chatbot-svar med 25,8 prosentpoeng, men stemmene
+rangerer tekst, ikke car1, og vårt modellvalg hviler på arrangørens egen
+R²-tabell, ikke på arena-stemmer. 2611.32316 «ASTERISM» — ett bilde alene
+avgjør 24,2 % av oppgavene i en revisjon av multi-bilde-benchmarks; ingen
+tekst, ingen avkastning, ingen vei til persentilrangering. 2611.29079
+«Factory-simulator» — deterministisk fabrikkmiljø der LLM-agenter måles mot
+optimeringsreferanser; utfallet er fabrikkprofitt, ikke car1. 2611.28881
+«FormaFin» — små språkmodeller oversetter lånevilkår til SMT og treffer
+92,6–96,8 % på covenant-spørsmål; vi finjusterer ikke, og compliance er ikke
+rangeringsinformasjon om avkastning. 2611.27369 «AMARIS» — subrom-sammenslåing
+av generalist- og spesialistvekter, med 98,4 % spesialist-retensjon i et
+Qwen3-8B finans-oppsett; vi kaller en vertsmodell og merger ikke sjekkpunkter,
+og retensjon er ikke ΔR². 2611.27210 «The Rise of Agents and the Labor Market»
+— agentic beta, samvariasjon mellom aksjeavkastning og aggregerte agent-tokens,
+predikerer 2,11 % lavere stillingsvekst neste seks måneder, og earnings calls
+brukes bare til å sjekke at firmaet nevner AI-utrulling. Avkastningen er en
+eksponerings-input, ikke en announcement-residual over surprise, og
+call-omtalen er ikke testet som inkrementell rangeringsfeature. Å ta den inn
+uten den testen ville bryte kø 5.)
+
 ### Uke 2026-W47 (20. nov 2026)
 
 Collect OK: 7 nye arXiv-papers, 0 feilede søk. 4 beholdt, 3 forkastet.
@@ -505,6 +542,8 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 > SYSTEM_PROMPT mer enn én endring av gangen nå som vi er midt i scoring.
 > Merk fra W47: bredden i egne prediksjoner er en forutsetning for all ΔR² —
 > sjekk kø 15-vakten før flere prompt-eksperimenter, ellers måler vi støy.
+> **W48 (2026-11-25):** 0 beholdte papers. Ingen nye kø-punkter, ingen
+> statusflytt. Rekkefølgen over står, og `queue.yaml` er uendret.
 
 1. **Parser-robusthet i 2c (blokkerende)**: `item.content` må akseptere vilkårlig
    JSON-type — option-implied-stats er et objekt, og examples-repoet hadde selv
@@ -686,6 +725,27 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    hvis spredningen viser seg ustabil. (Wang 2611.19530, 20. nov.)
 
 ## Plattform-endringer
+
+- 2026-11-25 — ukentlig web-sjekk (bloggside og hjemmeside lest i fulltekst;
+  GitHub API mot orgens 6 repos; Substack-RSS svarer):
+  - **Blogg: ingen nye poster.** Fortsatt kun «New data for Q4 2026» (29. sep)
+    — nå 8 uker gammel. Live-vinduet (12. okt–15. des) har 20 dager igjen.
+    Hjemmesiden gjentar «Q4 scoring runs October 12 through December 15».
+    Blogg-søket gjengir samme påstand som før: surprise forklarer om lag 10 %,
+    og GPT-6 Astra mer enn 30 % med preview. **Ingen nye modell-benchmarks →
+    OPENAI_MODEL=gpt-6-astra står.**
+  - **GitHub-org: uendret, 6 repos, ingen nye commits siden 20. nov.**
+    `examples` topp er fortsatt 450204f (10. okt, PR #7 options-market-data).
+    `starter-modal` 12434cd og `starter-railway` b8f708b (30. sep),
+    `baseline-earnings-summary` a118c46 (30. sep), `model-card-skill` 2361c76
+    (21. sep, v1.0.0), `.github` 3f8be96 (6. jul). Ingen SDK- eller
+    materials-endring som berører 2c/3c. Contest rules peker fortsatt på den
+    frosne scorer-commiten `501bd31`.
+  - **Substack:** RSS-feeden svarer nå (tidligere avvist som XML i cron-crawleren)
+    men kanalen har null poster, og forsiden viser heller ingen. Ingenting å
+    lese.
+  - **Ingen platform-endring å handle på.** Tidskritisk gjenstående er fortsatt
+    kø 9 (model card, frist 15. des) — 20 dager.
 
 - 2026-11-20 — ukentlig web-sjekk (web_search mot blogg/leaderboard; web_extract
   OK mot arxiv.org og github.com/orgs, fortsatt bare søkesnutter mot
