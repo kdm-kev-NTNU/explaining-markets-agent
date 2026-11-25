@@ -172,7 +172,7 @@ items:
   - id: 12
     title: "Valideringshygiene for 3b (frys plan, tell trials)"
     area: 3b
-    status: queued
+    status: in_progress
     rank: 8
     risk: offline_analysis
     automation: auto_pr
@@ -186,6 +186,7 @@ items:
       - {date: 2026-11-06, status: queued, note: "OLIVIA: frys analyseplan før arkivkjøring"}
       - {date: 2026-11-13, status: queued, note: "Brini: arkiv ΔR² ikke systematisk oppblåst for avkastning"}
       - {date: 2026-11-20, status: queued, note: "Zhang/Foley: tell trials, paret bootstrap, skriv cutoff-antagelse"}
+      - {date: 2026-11-25, status: in_progress, note: "Frosset plan, tre trials og paret bootstrap. Ingen arkivkjøring. Cutoff ukjent."}
 
   - id: 13
     title: "Surprise-konveksitet betinget på verdsettelsesusikkerhet"
