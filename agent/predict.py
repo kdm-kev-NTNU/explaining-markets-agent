@@ -370,6 +370,30 @@ def _plain_lines(content: object) -> list[str]:
     return []
 
 
+_SCENARIO_ROW = re.compile(r"^[\s|*#>\-_]*(bull|base|bear)\b", re.I)
+SCENARIO_ROW_MAX_CHARS = 300
+
+
+def extract_scenario_grid(preview: str) -> list[str]:
+    """Bull/base/bear rows from the preview, verbatim, first of each kind.
+
+    Works for markdown table rows and bullet lines. Extracted before
+    compression so the grid survives even when the preview is cut.
+    """
+    rows: dict[str, str] = {}
+    for line in preview.splitlines():
+        match = _SCENARIO_ROW.match(line)
+        if not match:
+            continue
+        kind = match.group(1).lower()
+        if kind in rows:
+            continue
+        body = line[match.start(1):].replace("**", "").strip().strip("|")
+        cells = [c.strip() for c in body.split("|")]
+        rows[kind] = " | ".join(c for c in cells if c)[:SCENARIO_ROW_MAX_CHARS]
+    return [rows[k] for k in ("bull", "base", "bear") if k in rows]
+
+
 def format_materials(bundle: object) -> str:
     """Turn the event's bundle into the text the model reads.
 
@@ -393,6 +417,11 @@ def format_materials(bundle: object) -> str:
 
     preview = (by_id.get(PREVIEW_ID) or {}).get("content")
     if isinstance(preview, str) and preview.strip():
+        grid = extract_scenario_grid(preview)
+        if grid:
+            sections.append(
+                "Scenario grid from the research note (extracted verbatim):\n" + "\n".join(grid)
+            )
         text = _compress_preview(preview)
         sections.append(
             "Research note written BEFORE the release (expectations, not results):\n" + text

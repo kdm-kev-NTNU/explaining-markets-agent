@@ -39,7 +39,7 @@ items:
   - id: 3
     title: "Scenario-mapping i 3c"
     area: 3c
-    status: partial
+    status: done
     rank: 5
     risk: live_prompt
     automation: manual
@@ -50,6 +50,7 @@ items:
       - {date: 2026-10-09, status: queued, note: "bull/base/bear-grid med forventet aksjereaksjon"}
       - {date: 2026-10-13, status: partial, note: "prompt-instruksjon implementert; deterministisk grid-ekstraksjon gjenstår", commit: "c7c99b6"}
       - {date: 2026-10-16, status: partial, note: "quantide.cn NVDA-gjennomgang bekrefter metoden; grid-ekstraksjon fortsatt åpen"}
+      - {date: 2026-11-25, status: done, note: "Deterministisk uttrekk av bull/base/bear-rader før komprimering. Gridet står foran previewen i materials."}
 
   - id: 4
     title: "Surprise-residualisering + novelty-/taler-vekting i 3c"

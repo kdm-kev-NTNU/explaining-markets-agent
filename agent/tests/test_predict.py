@@ -250,6 +250,27 @@ def test_an_option_stats_object_does_not_reject_the_bundle() -> None:
     assert "rows" not in text
 
 
+def test_scenario_grid_is_extracted_from_tables_and_bullets() -> None:
+    """Queue 3: grid rows reach the model even if compression drops the section."""
+    table = (
+        "## Scenario Analysis\n| Scenario | EPS | Reaction |\n|---|---|---|\n"
+        "| **Bear** | $1.05 | -8% |\n| Base | $1.20 | +1% |\n| Bull | $1.35 | +7% |\n"
+        "Bull case risk is priced.\n"
+    )
+    assert predict_module.extract_scenario_grid(table) == [
+        "Bull | $1.35 | +7%",
+        "Base | $1.20 | +1%",
+        "Bear | $1.05 | -8%",
+    ]
+    bullets = "- **Bull case:** beat and raise, +6%\n- Basement project delayed\n"
+    assert predict_module.extract_scenario_grid(bullets) == ["Bull case: beat and raise, +6%"]
+    assert predict_module.extract_scenario_grid(PREVIEW) == []
+
+    grid_item = {**PREVIEW_ITEM, "content": PREVIEW + table}
+    text = predict_module.format_materials(_bundle(grid_item))
+    assert text.index("Scenario grid from the research note") < text.index("Research note written")
+
+
 def test_coverage_names_missing_inputs_and_blocks_a_ticker_prior() -> None:
     """Queue 6: an absent prior is stated, not silently replaced."""
     full = predict_module.materials_coverage(BUNDLE)
