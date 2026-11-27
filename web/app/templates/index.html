@@ -12,6 +12,13 @@
       <div class="l">{{ m.label }}</div>
     </div>
     {% endfor %}
+    {% if standing %}
+    <a class="em-hero-metric em-hero-rank" href="{{ leaderboard_url }}" target="_blank" rel="noopener"
+       title="{{ standing.public_name }} · {{ standing.period }} · plass {{ standing.participant_rank }} av {{ standing.participants }} uten AI-baselines">
+      <div class="v">#{{ standing.rank }} av {{ standing.total }}</div>
+      <div class="l">Min plassering ({{ standing.public_name }})</div>
+    </a>
+    {% endif %}
   </div>
 </section>
 

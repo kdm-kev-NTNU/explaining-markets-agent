@@ -30,6 +30,16 @@ uvicorn app.main:app --reload --port 8000
 
 På Railway: sett de samme variablene under tjenestens Variables.
 
+## Plassering i konkurransen
+
+Forsiden viser egen plassering, hentet fra arrangørens offentlige
+leaderboard-JSON (cachet 10 min). Navnet er `Tokenmaxxer` som standard,
+og kan overstyres med `LEADERBOARD_NAME`. Feiler hentingen, skjules kortet.
+
+Historikk logges daglig av `.github/workflows/leaderboard-snapshot.yml`
+til `data/leaderboard_history.csv` (kjør manuelt:
+`python scripts/snapshot_leaderboard.py`).
+
 Tester:
 
 ```bash

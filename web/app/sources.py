@@ -1,4 +1,4 @@
-"""Ekstern data: GitHub raw FORSKNING.md og queue.yaml.
+"""Ekstern data: GitHub raw FORSKNING.md, queue.yaml og leaderboard-plassering.
 
 Returnerer eksplisitte resultattyper — kaster aldri unntak ut til rutene.
 Cache-tilstand eies her; klokken injiseres for deterministiske tester.
@@ -14,6 +14,7 @@ from typing import Callable, Generic, TypeVar
 import httpx
 
 from .content import FORSKNING_RAW_URL, QUEUE_RAW_URL
+from .leaderboard import PUBLIC_NAME, Standing, featured_period, find_standing, index_url, standings_url
 from .research_parser import ResearchDigest, parse_forskning
 from .research_registry import QueueRegistry, parse_queue_yaml
 
@@ -21,6 +22,7 @@ T = TypeVar("T")
 
 DEFAULT_TTL_SECONDS = 600.0
 FORSKNING_TIMEOUT = 12.0
+LEADERBOARD_TIMEOUT = 6.0
 
 
 @dataclass(frozen=True)
@@ -84,10 +86,39 @@ class Sources:
         self._queue_cache: TTLCache[Available[QueueRegistry]] = TTLCache(
             ttl_seconds=ttl_seconds, clock=clock
         )
+        # Egen klient uten GitHub-token: tokenet skal aldri sendes til CloudFront.
+        self._lb_client = client or httpx.Client(timeout=LEADERBOARD_TIMEOUT)
+        self._standing_cache: TTLCache[Available[Standing]] = TTLCache(
+            ttl_seconds=ttl_seconds, clock=clock
+        )
+        self._public_name = os.environ.get("LEADERBOARD_NAME", "").strip() or PUBLIC_NAME
 
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
+            self._lb_client.close()
+
+    def fetch_standing(self) -> Result[Standing]:
+        """Egen plassering i inneværende konkurranseperiode."""
+        cached = self._standing_cache.get()
+        if cached is not None:
+            return cached
+        try:
+            resp = self._lb_client.get(index_url(), timeout=LEADERBOARD_TIMEOUT)
+            resp.raise_for_status()
+            period = featured_period(resp.json())
+            if not period:
+                return Unavailable(reason="Ingen rangert periode")
+            resp = self._lb_client.get(standings_url(period), timeout=LEADERBOARD_TIMEOUT)
+            resp.raise_for_status()
+            standing = find_standing(resp.json(), self._public_name)
+            if standing is None:
+                return Unavailable(reason=f"{self._public_name} finnes ikke i {period}")
+            result: Available[Standing] = Available(standing)
+            self._standing_cache.set(result)
+            return result
+        except Exception as exc:
+            return Unavailable(reason=f"{type(exc).__name__}: {exc}")
 
     def fetch_forskning(self) -> Result[tuple[str, ResearchDigest]]:
         cached = self._forskning_cache.get()

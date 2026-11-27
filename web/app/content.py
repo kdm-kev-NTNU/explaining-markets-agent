@@ -15,6 +15,7 @@ FORSKNING_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/FORSKNING.md
 QUEUE_RAW_URL = f"https://raw.githubusercontent.com/{REPO}/main/research/queue.yaml"
 QUEUE_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/queue.yaml"
 COMPETITION_URL = "https://explainingmarkets.ai/"
+LEADERBOARD_URL = "https://explainingmarkets.ai/leaderboard"
 
 
 @dataclass(frozen=True)

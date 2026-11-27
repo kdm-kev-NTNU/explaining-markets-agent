@@ -89,9 +89,13 @@ def healthz() -> dict:
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
     chart_max = max(b.value for b in content.HOME_CHART) or 1.0
+    sources: Sources = request.app.state.sources
+    standing_result = sources.fetch_standing()
     ctx = _base_context(request, "Konkurransen")
     ctx.update(
         {
+            "standing": standing_result.value if isinstance(standing_result, Available) else None,
+            "leaderboard_url": content.LEADERBOARD_URL,
             "hero": content.HOME_HERO,
             "steps": content.HOME_STEPS,
             "why_lead": content.HOME_WHY_LEAD,
