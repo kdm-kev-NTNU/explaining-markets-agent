@@ -9,6 +9,29 @@
 
 ## Ukentlige funn
 
+### Uke 2026-W48 (27. nov 2026)
+
+Collect OK: 1 nye arXiv-paper, 0 feilede søk. 0 beholdt, 1 forkastet.
+`state.json` ligger ikke i klonen (gitignorert), så dedup ble seedet fra de 49
+arXiv-ID-ene som allerede står i denne fila — inkludert de seks W48-forkastelsene
+fra 25. nov — før collect. Vinduet er de siste 21 dagene etter det settet.
+
+Ingen ny signalkilde, og ingen metodisk korreksjon av hvordan vi måler ΔR².
+Treffet kommer fra det brede llm-finans-søket; papiret selv handler ikke om
+earnings, avkastning eller asset pricing. **Ingen nye «Bruk (kø N)» og ingen
+statusflytt.** `queue.yaml` er gjennomgått og ikke mutert; anbefalt rekkefølge
+står. Web-sjekk: blogg, hjemmeside, GitHub-org og Substack uendret (se
+«Plattform-endringer» 2026-11-27).
+
+(Forkastet: 2611.34161 «CoordRoute» — koordinert ruting av forespørsler mellom
+store språkmodeller av ulik størrelse under ett fast compute-budsjett.
+Relative-demand-prediksjon, lookahead-solver og runtime-korreksjon øker total
+brukertilfredshet med 18,72 % over sterkeste eksisterende router på Azure
+Conversation- og BurstGPT-spor, og fullfører 91,88 % av ankomstene mot 80,13 %.
+Utfallet er tilfredshet under et FLOP-tak, ikke en car1-persentil utover
+surprise-benchmarken. Vi kaller én vertsmodell, gpt-6-astra, valgt fra
+arrangørens R²-tabell, og vi ruter ikke et vindu av kall mot hverandre.)
+
 ### Uke 2026-W48 (25. nov 2026)
 
 Collect OK: 6 nye arXiv-papers, 0 feilede søk. 0 beholdt, 6 forkastet.
@@ -544,6 +567,8 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
 > sjekk kø 15-vakten før flere prompt-eksperimenter, ellers måler vi støy.
 > **W48 (2026-11-25):** 0 beholdte papers. Ingen nye kø-punkter, ingen
 > statusflytt. Rekkefølgen over står, og `queue.yaml` er uendret.
+> **W48 (2026-11-27):** 1 nytt paper, forkastet (2611.34161). Fortsatt ingen
+> nye kø-punkter og ingen statusflytt.
 
 1. **Parser-robusthet i 2c (blokkerende)**: `item.content` må akseptere vilkårlig
    JSON-type — option-implied-stats er et objekt, og examples-repoet hadde selv
@@ -725,6 +750,28 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
    hvis spredningen viser seg ustabil. (Wang 2611.19530, 20. nov.)
 
 ## Plattform-endringer
+
+- 2026-11-27 — ukentlig web-sjekk (bloggside og hjemmeside lest i fulltekst;
+  GitHub API mot orgens 6 repos; contest rules lest i fulltekst; Substack-RSS
+  svarer):
+  - **Blogg: ingen nye poster.** Fortsatt kun «New data for Q4 2026» (29. sep)
+    — nå 8,5 uker gammel. Live-vinduet (12. okt–15. des) har 18 dager igjen.
+    Hjemmesiden gjentar «Q4 scoring runs October 12 through December 15».
+    Blogg-søket gjengir samme påstand som før: surprise forklarer om lag 10 %,
+    og GPT-6 Astra mer enn 30 % med preview. **Ingen nye modell-benchmarks →
+    OPENAI_MODEL=gpt-6-astra står.**
+  - **GitHub-org: uendret, 6 repos, ingen nye commits siden 25. nov.**
+    `examples` topp er fortsatt 450204f (10. okt, PR #7 options-market-data).
+    `starter-modal` 12434cd og `starter-railway` b8f708b (30. sep),
+    `baseline-earnings-summary` a118c46 (30. sep), `model-card-skill` 2361c76
+    (21. sep, v1.0.0), `.github` 3f8be96 (6. jul). Ingen SDK- eller
+    materials-endring som berører 2c/3c.
+  - **Contest rules:** sist oppdatert 29. sep. Scoringperioden er fortsatt
+    12. okt–15. des, og reglene peker fortsatt på den frosne scorer-commiten
+    `501bd31`. Model card er fortsatt vilkår for premie, ikke for
+    leaderboard-deltakelse. Kø 9 står, frist 15. des — 18 dager.
+  - **Substack:** RSS-feeden svarer 200. Kanalen har null poster.
+  - **Ingen platform-endring å handle på.**
 
 - 2026-11-25 — ukentlig web-sjekk (bloggside og hjemmeside lest i fulltekst;
   GitHub API mot orgens 6 repos; Substack-RSS svarer):
@@ -926,5 +973,6 @@ under «Plattform-endringer» 2026-10-08 (2) og ny kø-item 4.
   PEAD, LLM-finans, abnormal return prediction (6 søk, 21-dagers vindu)
 - explainingmarkets.ai/blog (via ukentlig web-sjekk i agent-turnen)
 - explainingmarkets.substack.com (arrangørens nyhetsbrev — kunngjøringer og
-  kvartalsresultater; XML-feed, ikke lesbar fra cron) og X @explainingmrkts
+  kvartalsresultater; RSS svarer, kanalen har hatt null poster gjennom
+  2026-11-27) og X @explainingmrkts
 - github.com/explaining-markets/* (SDK/starter-endringer)
