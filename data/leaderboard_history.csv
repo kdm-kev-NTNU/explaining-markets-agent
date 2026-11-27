@@ -1,0 +1,3 @@
+captured_at,period,frozen,rank,total,participant_rank,participants,rank_common,rank_own,ranking_metric,score,r_squared,n_obs,submission_id,public_name,generated_at
+2026-11-27T23:42:21+00:00,2026Q4,False,170,390,142,361,170,193,delta_r_squared_imputed,0.045932746981628636,0.11263317090577263,2672,s_30c977de775f,Tokenmaxxer,2026-11-26T23:54:13.006394+00:00
+2026-11-27T23:42:21+00:00,2026Q4-CONTEST,False,170,371,142,342,170,183,delta_r_squared_imputed,0.04626045399769241,0.11289203083973554,2669,s_30c977de775f,Tokenmaxxer,2026-11-26T23:54:13.006394+00:00
