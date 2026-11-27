@@ -296,13 +296,18 @@ a:hover { opacity: 0.85; }
 }
 
 .em-main {
-  /* Grid-barn strekkes ellers til full 1fr — justify-self midtstiller kolonnen */
-  justify-self: center;
+  /* Fyller 1fr-kolonnen; inner midtstilles her */
+  display: flex;
+  justify-content: center;
   box-sizing: border-box;
-  width: min(1040px, 100%);
-  max-width: 1040px;
+  width: 100%;
+  min-width: 0;
   padding: 1.75rem 2rem 2.5rem;
-  margin-inline: auto;
+}
+
+.em-main-inner {
+  width: 100%;
+  max-width: 920px;
 }
 
 .em-page-head {
