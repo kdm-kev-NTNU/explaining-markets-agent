@@ -31,7 +31,9 @@
 
 <div class="em-spacer-lg"></div>
 
-<div class="em-section-title">Hvorfor er dette vanskelig?</div>
+<div class="em-page-head">
+  <div class="em-section-title">Hvorfor er dette vanskelig?</div>
+</div>
 <div class="em-grid em-grid-why">
   <div class="em-why"><p>{{ why }}</p></div>
   <div class="em-analogy">
@@ -42,8 +44,10 @@
 
 <div class="em-spacer"></div>
 
-<div class="em-section-title">Hva fungerer best?</div>
-<p class="em-section-sub">Jo mer kontekst agenten får før og under call-et, jo mer forklarer den.</p>
+<div class="em-page-head">
+  <div class="em-section-title">Hva fungerer best?</div>
+  <p class="em-section-sub">Jo mer kontekst agenten får før og under call-et, jo mer forklarer den.</p>
+</div>
 <div class="em-chart">
   {% for bar in chart %}
   <div class="em-chart-row">
@@ -55,18 +59,20 @@
   </div>
   {% endfor %}
 </div>
-<p class="em-caption">{{ chart_caption }}</p>
+<p class="em-caption em-caption-center">{{ chart_caption }}</p>
 
 <div class="em-spacer"></div>
 
-<div class="em-section-title">Hva jeg bygde</div>
-<p class="em-section-sub">Autonom webhook-agent i live konkurranse.</p>
-<div class="em-chips">
+<div class="em-page-head">
+  <div class="em-section-title">Hva jeg bygde</div>
+  <p class="em-section-sub">Autonom webhook-agent i live konkurranse.</p>
+</div>
+<div class="em-chips em-chips-center">
   {% for chip in tech_chips %}
   <span class="em-chip">{{ chip }}</span>
   {% endfor %}
 </div>
-<div class="em-cta"><a href="{{ repo_url }}" target="_blank" rel="noopener">Se koden på GitHub →</a></div>
+<div class="em-cta em-cta-center"><a href="{{ repo_url }}" target="_blank" rel="noopener">Se koden på GitHub →</a></div>
 
 <details class="em-deep">
   <summary>For de spesielt interesserte: scoring, look-ahead og Optiver-overflaten</summary>
