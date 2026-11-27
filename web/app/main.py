@@ -94,13 +94,14 @@ def home(request: Request) -> HTMLResponse:
         {
             "hero": content.HOME_HERO,
             "steps": content.HOME_STEPS,
-            "why": content.HOME_WHY,
-            "analogy_title": content.HOME_ANALOGY_TITLE,
-            "analogy_body": content.HOME_ANALOGY_BODY,
+            "why_lead": content.HOME_WHY_LEAD,
+            "why_body": content.HOME_WHY_BODY,
+            "rules": content.HOME_RULES,
             "chart": content.HOME_CHART,
             "chart_max": chart_max,
             "chart_caption": content.HOME_CHART_CAPTION,
             "tech_chips": content.HOME_TECH_CHIPS,
+            "formulas": content.HOME_DEEP_DIVE_FORMULAS,
             "deep_dive": content.HOME_DEEP_DIVE,
         }
     )
@@ -113,11 +114,9 @@ def agent_page(request: Request) -> HTMLResponse:
     ctx.update(
         {
             "clocks": content.AGENT_CLOCKS,
-            "rules": content.AGENT_RULES,
             "live_flow": content.LIVE_FLOW,
             "deploy_chain": content.DEPLOY_CHAIN,
             "learn_chain": content.LEARN_CHAIN,
-            "formulas": content.AGENT_DEEP_DIVE_FORMULAS,
             "deep_dive": content.AGENT_DEEP_DIVE,
         }
     )

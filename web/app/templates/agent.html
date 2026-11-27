@@ -1,89 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Agenten · Explaining Markets{% endblock %}
 {% block content %}
-<div class="em-page-head">
+<div class="em-page-head em-page-top">
   <div class="em-label">Agenten</div>
-  <div class="em-section-title">Fra webhook til prediksjon på fem minutter</div>
-  <p class="em-section-sub">
-    Når et selskap rapporterer, får agenten beskjed.
-    Den svarer med en gang, tenker, og sender inn rangeringen.
-  </p>
+  <h1 class="em-section-title em-page-title">Fra varsel til svar på fem minutter</h1>
 </div>
 
-<div class="em-page-head">
-  <div class="em-section-title">Slik er agenten bygget</div>
-  <p class="em-section-sub">
-    Øverste rad skjer automatisk hver gang et selskap rapporterer.
-    Nederste rad holder agenten oppdatert.
-  </p>
-</div>
-
-<div class="em-lane">
-  <span class="em-lane-tag">Live · hver rapport</span>
-  <span class="em-lane-title">Når et selskap legger frem tall</span>
-  <span class="em-lane-cap">
-    Fem steg, helt automatisk. Agenten har fem minutter
-    fra varselet kommer til rangeringen er sendt inn.
-  </span>
-  <div class="em-flow">
-    {% for step in live_flow %}
-    <div class="em-flow-step{% if step.dark %} dark{% endif %}">
-      <span class="owner">{{ step.owner }}</span>
-      <span class="title">{{ step.title }}</span>
-      <span class="body">{{ step.body }}</span>
-      {% if step.time %}<span class="time">{{ step.time }}</span>{% endif %}
-    </div>
-    {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
-    {% endfor %}
-  </div>
-</div>
-
-<div class="em-lane em-lane-bg">
-  <span class="em-lane-tag">I bakgrunnen</span>
-  <span class="em-lane-title">Slik holdes agenten oppdatert</span>
-  <span class="em-lane-cap">To separate løkker som ikke påvirker en pågående prediksjon.</span>
-</div>
-
-<div class="em-grid em-grid-2">
-  <div>
-    <span class="em-chain-title">Utrulling</span>
-    <span class="em-chain-sub">Ved hver kodeendring</span>
-    <div class="em-flow">
-      {% for step in deploy_chain %}
-      <div class="em-flow-step">
-        <span class="owner">{{ step.owner }}</span>
-        <span class="title">{{ step.title }}</span>
-        <span class="body">{{ step.body }}</span>
-      </div>
-      {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
-      {% endfor %}
-    </div>
-  </div>
-  <div>
-    <span class="em-chain-title">Læring</span>
-    <span class="em-chain-sub">Hver fredag kl. 09:15</span>
-    <div class="em-flow">
-      {% for step in learn_chain %}
-      <div class="em-flow-step">
-        <span class="owner">{{ step.owner }}</span>
-        <span class="title">{{ step.title }}</span>
-        <span class="body">{{ step.body }}</span>
-      </div>
-      {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
-      {% endfor %}
-    </div>
-  </div>
-</div>
-
-<div class="em-legend em-legend-center">
-  <span class="em-legend-item"><span class="em-swatch dark"></span> Konkurransens plattform</span>
-  <span class="em-legend-item"><span class="em-swatch mine"></span> Min kode</span>
-  <span class="em-legend-item"><span class="em-swatch bg"></span> Skjer i bakgrunnen</span>
-</div>
-
-<div class="em-page-head">
-  <div class="em-section-title">To klokker</div>
-</div>
 <div class="em-grid em-grid-2">
   {% for c in clocks %}
   <div class="em-clock">
@@ -94,35 +16,78 @@
   {% endfor %}
 </div>
 
-<div class="em-spacer-lg"></div>
-
-<div class="em-page-head">
-  <div class="em-section-title">Tre spilleregler</div>
-</div>
-<div class="em-grid em-grid-3">
-  {% for r in rules %}
-  <div class="em-rule">
-    <h3>{{ r.title }}</h3>
-    <p>{{ r.body }}</p>
+<section class="em-section">
+  <div class="em-page-head">
+    <h2 class="em-section-title">Hver rapport, steg for steg</h2>
   </div>
-  {% endfor %}
-</div>
 
-<div class="em-spacer"></div>
-
-<details class="em-deep">
-  <summary>For de spesielt interesserte: scoring-formel, signal-design og fallback</summary>
-  <div class="body">
-    <p>
-      Ett event, ett utfall: <code>car1</code> percentilrangert til
-      <code>y ∈ [0, 1]</code>, surprise rangert til <code>surprise_pct</code>. Regresjonen:
-    </p>
-    {% for f in formulas %}
-    <div class="em-formula">{{ f }}</div>
-    {% endfor %}
-    {% for title, body in deep_dive %}
-    <p><strong>{{ title }}</strong> {{ body }}</p>
-    {% endfor %}
+  <div class="em-legend em-legend-center">
+    <span class="em-legend-item"><span class="em-swatch dark"></span> Konkurransens plattform</span>
+    <span class="em-legend-item"><span class="em-swatch mine"></span> Min kode</span>
+    <span class="em-legend-item"><span class="em-swatch bg"></span> Skjer i bakgrunnen</span>
   </div>
-</details>
+
+  <div class="em-lane">
+    <div class="em-flow">
+      {% for step in live_flow %}
+      <div class="em-flow-step {% if step.dark %}dark{% else %}mine{% endif %}">
+        <span class="owner">{{ step.owner }}</span>
+        <span class="title">{{ step.title }}</span>
+        <span class="body">{{ step.body }}</span>
+        {% if step.time %}<span class="time">{{ step.time }}</span>{% endif %}
+      </div>
+      {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="em-section">
+  <div class="em-page-head">
+    <h2 class="em-section-title">I bakgrunnen</h2>
+    <p class="em-section-sub">Påvirker aldri en prediksjon som pågår.</p>
+  </div>
+
+  <div class="em-grid em-grid-2">
+    <div>
+      <span class="em-chain-title">Ny versjon</span>
+      <span class="em-chain-sub">Ved hver kodeendring</span>
+      <div class="em-flow">
+        {% for step in deploy_chain %}
+        <div class="em-flow-step bg">
+          <span class="owner">{{ step.owner }}</span>
+          <span class="title">{{ step.title }}</span>
+          <span class="body">{{ step.body }}</span>
+        </div>
+        {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <span class="em-chain-title">Læring</span>
+      <span class="em-chain-sub">Hver fredag kl. 09:15</span>
+      <div class="em-flow">
+        {% for step in learn_chain %}
+        <div class="em-flow-step bg">
+          <span class="owner">{{ step.owner }}</span>
+          <span class="title">{{ step.title }}</span>
+          <span class="body">{{ step.body }}</span>
+        </div>
+        {% if not loop.last %}<span class="em-arrow">→</span>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="em-section">
+  <details class="em-deep">
+    <summary>For de spesielt interesserte: signaler, reserveplan og drift</summary>
+    <div class="body">
+      {% for title, body in deep_dive %}
+      <p><strong>{{ title }}</strong> {{ body }}</p>
+      {% endfor %}
+    </div>
+  </details>
+</section>
 {% endblock %}

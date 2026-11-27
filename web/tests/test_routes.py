@@ -52,11 +52,23 @@ def test_home_and_agent_contain_key_copy(admin_env: None) -> None:
 
         agent = client.get("/agent")
         assert agent.status_code == 200
-        assert "Fra webhook til prediksjon" in agent.text
+        assert "Fra varsel til svar" in agent.text
         assert "20 s" in agent.text
         assert "Presentert av" not in agent.text
         assert "Siste commit" not in agent.text
         assert "ingen hemmeligheter" not in agent.text
+
+
+def test_home_and_agent_are_plain_and_not_repeated(admin_env: None) -> None:
+    with TestClient(real_app) as client:
+        home = client.get("/").text
+        agent = client.get("/agent").text
+        for page in (home, agent):
+            assert "—" not in page  # ingen tankestreker
+        assert "Spillereglene" in home
+        assert "Spillereglene" not in agent
+        assert "ΔR² = R²(full)" in home
+        assert "ΔR² = R²(full)" not in agent
 
 
 def test_forskning_requires_login(admin_env: None) -> None:
