@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Forskning · Explaining Markets{% endblock %}
 {% block content %}
-<div class="em-label">Forskning</div>
-<div class="em-section-title">Hva agenten lærer hver uke</div>
-<p class="em-section-sub">
-  Papers kategorisert etter funnet-uke, koblet til implementeringskøen med status.
-  <a href="{{ forskning_blob_url }}">FORSKNING.md</a>
-  {% if queue_blob_url %} · <a href="{{ queue_blob_url }}">queue.yaml</a>{% endif %}
-</p>
+<div class="em-page-head">
+  <div class="em-label">Forskning</div>
+  <div class="em-section-title">Hva agenten lærer hver uke</div>
+  <p class="em-section-sub">
+    Papers kategorisert etter funnet-uke, koblet til implementeringskøen med status.
+    <a href="{{ forskning_blob_url }}">FORSKNING.md</a>
+    {% if queue_blob_url %} · <a href="{{ queue_blob_url }}">queue.yaml</a>{% endif %}
+  </p>
+</div>
 
 {% if not forskning_available %}
 <div class="em-warn">

@@ -5,11 +5,22 @@ from __future__ import annotations
 import httpx
 from fastapi.testclient import TestClient
 
+from app.auth import SESSION_COOKIE
 from app.main import app
 from app.sources import Sources
 
 
-def test_script_in_paper_title_is_escaped() -> None:
+def _login(client: TestClient) -> None:
+    r = client.post(
+        "/admin",
+        data={"username": "ADMIN", "password": "FUTURE", "next": "/forskning"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert SESSION_COOKIE in r.cookies or SESSION_COOKIE in client.cookies
+
+
+def test_script_in_paper_title_is_escaped(admin_env: None) -> None:
     body = (
         "## Ukentlige funn\n\n### Uke 2026-W99\n\n"
         "1 beholdt, 0 forkastet.\n\n"
@@ -21,13 +32,14 @@ def test_script_in_paper_title_is_escaped() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if "raw.githubusercontent" in str(request.url):
             return httpx.Response(200, text=body)
-        if "api.github.com" in str(request.url):
-            return httpx.Response(200, json=[])
+        if "queue.yaml" in str(request.url):
+            return httpx.Response(200, text="version: 1\nitems: []\n")
         return httpx.Response(404)
 
     sources = Sources(client=httpx.Client(transport=httpx.MockTransport(handler)), ttl_seconds=600)
     with TestClient(app) as client:
         client.app.state.sources = sources
+        _login(client)
         r = client.get("/forskning")
         assert r.status_code == 200
         assert "<script>alert(1)</script>" not in r.text

@@ -14,8 +14,6 @@ FORSKNING_RAW_URL = f"https://raw.githubusercontent.com/{REPO}/main/research/FOR
 FORSKNING_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/FORSKNING.md"
 QUEUE_RAW_URL = f"https://raw.githubusercontent.com/{REPO}/main/research/queue.yaml"
 QUEUE_BLOB_URL = f"https://github.com/{REPO}/blob/main/research/queue.yaml"
-COMMITS_API_URL = f"https://api.github.com/repos/{REPO}/commits?per_page=4"
-AUTHOR_URL = "https://github.com/kdm-kev-NTNU"
 COMPETITION_URL = "https://explainingmarkets.ai/"
 
 

@@ -27,21 +27,6 @@ def _ok_forskning(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, text=body)
 
 
-def _ok_commits(request: httpx.Request) -> httpx.Response:
-    return httpx.Response(
-        200,
-        json=[
-            {
-                "sha": "abcdef1234567890",
-                "commit": {
-                    "message": "FEATURE: something\n\nbody",
-                    "author": {"date": "2026-11-25T12:00:00Z"},
-                },
-            }
-        ],
-    )
-
-
 def test_fetch_forskning_success_and_cache() -> None:
     clock = FakeClock()
     calls = {"n": 0}
@@ -92,42 +77,6 @@ def test_fetch_forskning_timeout_is_unavailable() -> None:
     result = sources.fetch_forskning()
     assert isinstance(result, Unavailable)
     assert "Timeout" in result.reason
-
-
-def test_latest_commits_success_and_cache() -> None:
-    clock = FakeClock()
-    calls = {"n": 0}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls["n"] += 1
-        return _ok_commits(request)
-
-    client = httpx.Client(transport=httpx.MockTransport(handler))
-    sources = Sources(client=client, clock=clock, ttl_seconds=10)
-
-    first = sources.latest_commits()
-    assert isinstance(first, Available)
-    assert first.value[0].sha == "abcdef1"
-    assert first.value[0].msg == "FEATURE: something"
-    assert calls["n"] == 1
-
-    clock.advance(5)
-    assert isinstance(sources.latest_commits(), Available)
-    assert calls["n"] == 1
-
-    clock.advance(6)
-    assert isinstance(sources.latest_commits(), Available)
-    assert calls["n"] == 2
-
-
-def test_latest_commits_error_is_unavailable() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, text="rate limited")
-
-    client = httpx.Client(transport=httpx.MockTransport(handler))
-    sources = Sources(client=client, ttl_seconds=600)
-    result = sources.latest_commits()
-    assert isinstance(result, Unavailable)
 
 
 def test_fetch_queue_success_and_error() -> None:

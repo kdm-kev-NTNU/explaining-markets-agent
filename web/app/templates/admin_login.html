@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Research desk · Explaining Markets{% endblock %}
+{% block content %}
+<section class="em-admin">
+  <div class="em-admin-card">
+    <div class="em-eyebrow">Intern forskningsportal</div>
+    <h1>Research desk</h1>
+    <p class="em-admin-lead">
+      Kuratert forskning, implementeringskø og signal-pipeline bak agenten.
+    </p>
+
+    <div class="em-admin-metrics">
+      <div class="em-admin-metric">
+        <div class="v">21+</div>
+        <div class="l">Papers vurdert</div>
+      </div>
+      <div class="em-admin-metric">
+        <div class="v">Ukentlig</div>
+        <div class="l">arXiv-skann</div>
+      </div>
+      <div class="em-admin-metric">
+        <div class="v">ΔR²</div>
+        <div class="l">Prioritering</div>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="em-warn">{{ error }}</div>
+    {% endif %}
+
+    {% if not auth_configured and not error %}
+    <div class="em-warn">
+      Innlogging er ikke konfigurert. Sett ADMIN_USERNAME, ADMIN_PASSWORD og SESSION_SECRET.
+    </div>
+    {% endif %}
+
+    <form method="post" action="/admin" class="em-admin-form" autocomplete="on">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label class="em-admin-field">
+        <span>Brukernavn</span>
+        <input type="text" name="username" autocomplete="username" required {% if not auth_configured %}disabled{% endif %}>
+      </label>
+      <label class="em-admin-field">
+        <span>Passord</span>
+        <input type="password" name="password" autocomplete="current-password" required {% if not auth_configured %}disabled{% endif %}>
+      </label>
+      <button type="submit" class="em-admin-submit" {% if not auth_configured %}disabled{% endif %}>
+        Åpne forskningsportalen
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}

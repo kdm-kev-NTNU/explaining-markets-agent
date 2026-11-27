@@ -1,4 +1,4 @@
-"""Ekstern data: GitHub raw FORSKNING.md og siste commits.
+"""Ekstern data: GitHub raw FORSKNING.md og queue.yaml.
 
 Returnerer eksplisitte resultattyper — kaster aldri unntak ut til rutene.
 Cache-tilstand eies her; klokken injiseres for deterministiske tester.
@@ -13,7 +13,7 @@ from typing import Callable, Generic, TypeVar
 
 import httpx
 
-from .content import COMMITS_API_URL, FORSKNING_RAW_URL, QUEUE_RAW_URL
+from .content import FORSKNING_RAW_URL, QUEUE_RAW_URL
 from .research_parser import ResearchDigest, parse_forskning
 from .research_registry import QueueRegistry, parse_queue_yaml
 
@@ -21,7 +21,6 @@ T = TypeVar("T")
 
 DEFAULT_TTL_SECONDS = 600.0
 FORSKNING_TIMEOUT = 12.0
-COMMITS_TIMEOUT = 8.0
 
 
 @dataclass(frozen=True)
@@ -62,13 +61,6 @@ class TTLCache(Generic[T]):
         self._expires_at = 0.0
 
 
-@dataclass(frozen=True)
-class CommitInfo:
-    sha: str
-    msg: str
-    date: str
-
-
 class Sources:
     """Henter og cacher eksterne kilder. Én instans per app."""
 
@@ -90,9 +82,6 @@ class Sources:
             ttl_seconds=ttl_seconds, clock=clock
         )
         self._queue_cache: TTLCache[Available[QueueRegistry]] = TTLCache(
-            ttl_seconds=ttl_seconds, clock=clock
-        )
-        self._commits_cache: TTLCache[Available[tuple[CommitInfo, ...]]] = TTLCache(
             ttl_seconds=ttl_seconds, clock=clock
         )
 
@@ -125,28 +114,6 @@ class Sources:
             registry = parse_queue_yaml(resp.text)
             result: Available[QueueRegistry] = Available(registry)
             self._queue_cache.set(result)
-            return result
-        except Exception as exc:
-            return Unavailable(reason=f"{type(exc).__name__}: {exc}")
-
-    def latest_commits(self) -> Result[tuple[CommitInfo, ...]]:
-        cached = self._commits_cache.get()
-        if cached is not None:
-            return cached
-        try:
-            resp = self._client.get(COMMITS_API_URL, timeout=COMMITS_TIMEOUT)
-            resp.raise_for_status()
-            data = resp.json()
-            commits = tuple(
-                CommitInfo(
-                    sha=c["sha"][:7],
-                    msg=(c["commit"]["message"].splitlines() or [""])[0][:64],
-                    date=c["commit"]["author"]["date"][:10],
-                )
-                for c in data
-            )
-            result: Available[tuple[CommitInfo, ...]] = Available(commits)
-            self._commits_cache.set(result)
             return result
         except Exception as exc:
             return Unavailable(reason=f"{type(exc).__name__}: {exc}")

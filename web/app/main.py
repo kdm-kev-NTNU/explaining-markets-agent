@@ -1,23 +1,35 @@
 """FastAPI-presentasjonsside for Explaining Markets.
 
-Ruter: /, /agent, /forskning, /healthz
+Ruter: /, /agent, /forskning, /admin, /healthz
 Ekstern data går via Sources — feil gir Unavailable, aldri 500 fra GitHub.
+Forskning krever admin-sesjon.
 """
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, Form, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
 
 from . import content
+from .auth import (
+    AuthRequired,
+    create_session_token,
+    is_admin_request,
+    load_admin_settings,
+    require_admin,
+    safe_next,
+    session_cookie_kwargs,
+    verify_credentials,
+)
 from .research_view import build_research_view, parse_filters
-from .sources import Available, Unavailable, Sources
+from .sources import Available, Sources
 
 HERE = Path(__file__).resolve().parent
 md = MarkdownIt("commonmark", {"html": False})
@@ -44,20 +56,28 @@ templates.env.filters["markdown"] = render_markdown
 # Autoescape is on by default for .html in Jinja2Templates
 
 
+@app.exception_handler(AuthRequired)
+async def auth_required_handler(request: Request, exc: AuthRequired) -> RedirectResponse:
+    return RedirectResponse(url=f"/admin?next={exc.next_path}", status_code=303)
+
+
 def _base_context(request: Request, active: str) -> dict:
-    sources: Sources = request.app.state.sources
-    commits = sources.latest_commits()
     return {
         "request": request,
         "active": active,
         "nav": content.NAV,
         "repo": content.REPO,
         "repo_url": content.REPO_URL,
-        "author_url": content.AUTHOR_URL,
         "competition_url": content.COMPETITION_URL,
-        "commits": commits,
-        "commits_available": isinstance(commits, Available),
-        "latest_commit": commits.value[0] if isinstance(commits, Available) and commits.value else None,
+        "is_admin": is_admin_request(request),
+    }
+
+
+def _cookie_secure(request: Request) -> bool:
+    return request.url.scheme == "https" or os.environ.get("COOKIE_SECURE", "").lower() in {
+        "1",
+        "true",
+        "yes",
     }
 
 
@@ -104,8 +124,73 @@ def agent_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "agent.html", ctx)
 
 
+@app.get("/admin", response_model=None)
+def admin_login_get(request: Request) -> Response:
+    if is_admin_request(request):
+        return RedirectResponse(url=safe_next(request.query_params.get("next")), status_code=303)
+    settings = load_admin_settings()
+    ctx = _base_context(request, "Forskning")
+    ctx.update(
+        {
+            "next": safe_next(request.query_params.get("next")),
+            "error": None,
+            "auth_configured": settings is not None,
+        }
+    )
+    return templates.TemplateResponse(request, "admin_login.html", ctx)
+
+
+@app.post("/admin", response_model=None)
+def admin_login_post(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    next: str = Form("/forskning"),
+) -> Response:
+    settings = load_admin_settings()
+    destination = safe_next(next)
+    if settings is None:
+        ctx = _base_context(request, "Forskning")
+        ctx.update(
+            {
+                "next": destination,
+                "error": "Innlogging er ikke konfigurert. Sett ADMIN_USERNAME, ADMIN_PASSWORD og SESSION_SECRET.",
+                "auth_configured": False,
+            }
+        )
+        return templates.TemplateResponse(request, "admin_login.html", ctx, status_code=503)
+
+    if not verify_credentials(settings, username, password):
+        ctx = _base_context(request, "Forskning")
+        ctx.update(
+            {
+                "next": destination,
+                "error": "Feil brukernavn eller passord.",
+                "auth_configured": True,
+            }
+        )
+        return templates.TemplateResponse(request, "admin_login.html", ctx, status_code=401)
+
+    response = RedirectResponse(url=destination, status_code=303)
+    response.set_cookie(
+        value=create_session_token(settings),
+        **session_cookie_kwargs(secure=_cookie_secure(request)),
+    )
+    return response
+
+
+@app.post("/admin/logout")
+def admin_logout(request: Request) -> RedirectResponse:
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(key="em_admin", path="/")
+    return response
+
+
 @app.get("/forskning", response_class=HTMLResponse)
-def forskning_page(request: Request) -> HTMLResponse:
+def forskning_page(
+    request: Request,
+    _: None = Depends(require_admin),
+) -> HTMLResponse:
     sources: Sources = request.app.state.sources
     result = sources.fetch_forskning()
     queue_result = sources.fetch_queue()
